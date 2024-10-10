@@ -1,39 +1,27 @@
 package zio2demo
 
-import zio.{ZIO, ZLayer, ZIOAppDefault, Scope, ULayer}
+import zio.{ZIO, ZLayer, ZIOAppDefault, Scope, ULayer, URIO}
 import zio2demo.controll.CarController
-import zio2demo.storage.{DB}
-import zio2demo.storage.driver.{ConnectionPool}
-import zio2demo.storage.repositories.CarRepository
-import zio2demo.service.CarService
-import zio2demo.controll.CarController
+import zio2demo.storage.{DatabaseLive}
+import zio2demo.storage.driver.{ConnectionPoolLive}
+import zio2demo.storage.repositories.CarRepositoryLive
+import zio2demo.service.CarServiceLive
+import zio2demo.controll.CarControllerLive
 
 import scala.util.chaining._
 import zio.ZIOAppArgs
 
 object MyDemoApp extends ZIOAppDefault {
 
-  def program(carController: CarController): ZIO[Any, Nothing, Unit] = {
+  def program: URIO[CarController, Unit] = {
     for {
-      _ <- carController.registerNewCar("1234", "Ford", "Focus")
-      _ <- carController.registerNewCar("5678", "Toyota", "Corolla")
-      _ <- carController.registerNewCar("1234", "Ford", "Focus")
+      _ <- CarController.registerNewCar(1, "Ford", "Focus", 1)
+      _ <- CarController.registerNewCar(1, "Toyota", "Corolla", 2)
+      _ <- CarController.registerNewCar(3, "Ford", "Focus", 3)
     } yield ()
   }
 
-  val myLayer: ULayer[CarController] = (CarRepository.live ++ (ConnectionPool.live >>> DB.live)) >>> CarService.live >>> CarController.live
-  def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = ZIO.service[CarController].flatMap(program).provideLayer(myLayer).exitCode
-
-  // override def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = ZLayer
-  //   .make[CarController](
-  //     CarController.live,
-  //     CarService.live,
-  //     CarRepository.live,
-  //     DB.live,
-  //     ConnectionPool.live
-  //   )
-  //   .build
-  //   .map(_.get[CarController])
-  //   .flatMap(program)
+  val myLayer: ULayer[CarController] = (CarRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> CarServiceLive.live >>> CarControllerLive.live
+  def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = program.provideLayer(myLayer).exitCode
 }
 
