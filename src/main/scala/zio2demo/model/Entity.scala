@@ -11,6 +11,11 @@ trait EntityType[E <: Entity] {
 }
 
 object EntityType {
+  given EntityType[Company] with {
+    def entityName: String = "company"
+    def getForeignKey(e: Company): Option[Int] = None
+  }
+
   given EntityType[Department] with {
     def entityName: String = "department"
     def getForeignKey(e: Department): Option[Int] = Some(e.companyId)
