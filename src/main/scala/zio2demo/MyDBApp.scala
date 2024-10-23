@@ -1,8 +1,6 @@
 package zio2demo
 
-import zio.{ZIOAppArgs, ZIO, ZLayer, ZIOAppDefault, Scope, ULayer, URIO}
-
-import scala.util.chaining._
+import zio.{ZIOAppArgs, ZIO, ZLayer, ZIOAppDefault, Scope, URIO}
 
 import zio2demo.controller.{CarControllerLive, EmployeeControllerLive, DepartmentControllerLive, CompanyControllerLive}
 import zio2demo.controller.{CarController, EmployeeController, DepartmentController, CompanyController}
@@ -12,7 +10,7 @@ import zio2demo.storage.driver.{ConnectionPoolLive}
 import zio2demo.storage.repositories.{CarRepositoryLive, EmployeeRepositoryLive, DepartmentRepositoryLive, CompanyRepositoryLive}
 import zio2demo.storage.repositories.CompanyRepository
 
-object MyDemoApp extends ZIOAppDefault {
+object MyDBApp extends ZIOAppDefault {
 
   def program: URIO[CarController & EmployeeController & DepartmentController & CompanyController, Unit] = {
     for {
@@ -36,6 +34,7 @@ object MyDemoApp extends ZIOAppDefault {
     ++ ((EmployeeRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> EmployeeServiceLive.live >>> EmployeeControllerLive.live)
     ++ ((DepartmentRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> DepartmentServiceLive.live >>> DepartmentControllerLive.live)
     ++ ((CompanyRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> CompanyServiceLive.live >>> CompanyControllerLive.live)
+
   def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = program.provideLayer(myLayer).exitCode
 }
 
