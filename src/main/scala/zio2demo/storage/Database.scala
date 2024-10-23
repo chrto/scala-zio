@@ -6,7 +6,11 @@ import zio2demo.storage.driver.{ConnectionPool, Connection}
 import zio2demo.model.error.DatabaseError
 import zio2demo.model.Car
 
-class DB(connectionPool: ConnectionPool) {
+trait Database {
+  def transact[R, E, A](dbProgram: ZIO[Connection & R, E, A]): ZIO[R, E | DatabaseError, A]
+}
+
+case class DatabaseLive(connectionPool: ConnectionPool) extends Database {
   private def connection: ZIO[Scope, DatabaseError, Connection] =
     ZIO.acquireRelease
       (connectionPool.borrow)
@@ -18,6 +22,6 @@ class DB(connectionPool: ConnectionPool) {
     }
 }
 
-object DB {
-  lazy val live: URLayer[ConnectionPool, DB] = ZLayer.fromFunction(new DB(_))
+object DatabaseLive {
+  lazy val live: URLayer[ConnectionPool, Database] = ZLayer.fromFunction(new DatabaseLive(_))
 }

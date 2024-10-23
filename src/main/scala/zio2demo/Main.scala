@@ -1,39 +1,41 @@
 package zio2demo
 
-import zio.{ZIO, ZLayer, ZIOAppDefault, Scope, ULayer}
-import zio2demo.controll.CarController
-import zio2demo.storage.{DB}
-import zio2demo.storage.driver.{ConnectionPool}
-import zio2demo.storage.repositories.CarRepository
-import zio2demo.service.CarService
-import zio2demo.controll.CarController
+import zio.{ZIOAppArgs, ZIO, ZLayer, ZIOAppDefault, Scope, ULayer, URIO}
 
 import scala.util.chaining._
-import zio.ZIOAppArgs
+
+import zio2demo.controller.{CarControllerLive, EmployeeControllerLive, DepartmentControllerLive, CompanyControllerLive}
+import zio2demo.controller.{CarController, EmployeeController, DepartmentController, CompanyController}
+import zio2demo.service.{CarServiceLive, EmployeeServiceLive, DepartmentServiceLive, CompanyServiceLive}
+import zio2demo.storage.{DatabaseLive}
+import zio2demo.storage.driver.{ConnectionPoolLive}
+import zio2demo.storage.repositories.{CarRepositoryLive, EmployeeRepositoryLive, DepartmentRepositoryLive, CompanyRepositoryLive}
+import zio2demo.storage.repositories.CompanyRepository
 
 object MyDemoApp extends ZIOAppDefault {
 
-  def program(carController: CarController): ZIO[Any, Nothing, Unit] = {
+  def program: URIO[CarController & EmployeeController & DepartmentController & CompanyController, Unit] = {
     for {
-      _ <- carController.registerNewCar("1234", "Ford", "Focus")
-      _ <- carController.registerNewCar("5678", "Toyota", "Corolla")
-      _ <- carController.registerNewCar("1234", "Ford", "Focus")
+      _ <- CarController.register(1, "Ford", "Focus", 1)
+      _ <- CarController.register(1, "Toyota", "Corolla", 2)
+      _ <- CarController.register(3, "Ford", "Focus", 3)
+      _ <- EmployeeController.addEmployee(1, "John Doe", 2)
+      _ <- EmployeeController.addEmployee(2, "Jack Black", 2)
+      _ <- EmployeeController.addEmployee(1, "Admin Adminovic", 2)
+      _ <- DepartmentController.addDepartment(1, "DEV", 2)
+      _ <- DepartmentController.addDepartment(2, "SALE", 2)
+      _ <- DepartmentController.addDepartment(1, "DESK", 2)
+      _ <- CompanyController.addCompany(1, "Tescos")
+      _ <- CompanyController.addCompany(2, "Deskos")
+      _ <- CompanyController.addCompany(1, "Plenkos")
     } yield ()
   }
 
-  val myLayer: ULayer[CarController] = (CarRepository.live ++ (ConnectionPool.live >>> DB.live)) >>> CarService.live >>> CarController.live
-  def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = ZIO.service[CarController].flatMap(program).provideLayer(myLayer).exitCode
-
-  // override def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = ZLayer
-  //   .make[CarController](
-  //     CarController.live,
-  //     CarService.live,
-  //     CarRepository.live,
-  //     DB.live,
-  //     ConnectionPool.live
-  //   )
-  //   .build
-  //   .map(_.get[CarController])
-  //   .flatMap(program)
+  val myLayer: ZLayer[Any, Nothing, CarController & EmployeeController & DepartmentController & CompanyController] =
+    ((CarRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> CarServiceLive.live >>> CarControllerLive.live)
+    ++ ((EmployeeRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> EmployeeServiceLive.live >>> EmployeeControllerLive.live)
+    ++ ((DepartmentRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> DepartmentServiceLive.live >>> DepartmentControllerLive.live)
+    ++ ((CompanyRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> CompanyServiceLive.live >>> CompanyControllerLive.live)
+  def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = program.provideLayer(myLayer).exitCode
 }
 
