@@ -11,7 +11,7 @@ ThisBuild / scalafixDependencies ++= List("com.github.liancheng" %% "organize-im
 
 def settingsApp = Seq(
   name := "zio2-demp",
-  Compile / run / mainClass := Option("zio2demo.MyDemoApp"),
+  Compile / run / mainClass := Option("zio2demo.MyHttpApp"),
   testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
   libraryDependencies ++= Seq(
     zioHttp,
