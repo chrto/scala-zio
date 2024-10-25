@@ -15,6 +15,7 @@ def settingsApp = Seq(
   testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
   libraryDependencies ++= Seq(
     zioHttp,
+    zioUuid,
     zioTest,
     zioTestSBT,
     zioTestMagnolia

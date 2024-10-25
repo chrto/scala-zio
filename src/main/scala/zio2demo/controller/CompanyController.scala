@@ -1,45 +1,50 @@
 package zio2demo.controller
 
-import zio.{ZIO, URLayer, ZLayer, UIO, URIO}
-
-import scala.util.chaining._
-
+import zio.{ZIO, URLayer, ZLayer, IO}
+import zio.uuid.UUIDGenerator
+import zio.uuid.types.UUIDv7
 import zio2demo.service.CompanyService
 import zio2demo.model.Company
-import zio2demo.model.error.{ServiceError, EntityExistsError}
-import zio2demo.model.error.{DatabaseError, ConnectionNotAvailable}
+import zio2demo.model.ApplicationError._
 
 // Define service
 trait CompanyController {
-  def addCompany(id: Int, name: String): UIO[String]
+  def getCompany(uuid: UUIDv7): IO[ApplicationError, Company]
+  def getCompanies: IO[ApplicationError, Vector[Company]]
+  def addCompany(name: String): ZIO[UUIDGenerator, ApplicationError, UUIDv7]
+  def deleteCompany(uuid: UUIDv7): IO[ApplicationError, UUIDv7]
 }
 
 // front-facing API (Accessor Methods)
 object CompanyController {
-  def addCompany(id: Int, name: String): URIO[CompanyController, String] =
-    ZIO.serviceWithZIO[CompanyController](_.addCompany(id, name))
+  def getCompany(uuid: UUIDv7): ZIO[CompanyController, ApplicationError, Company] =
+    ZIO.serviceWithZIO[CompanyController](_.getCompany(uuid))
+
+  def getCompanies: ZIO[CompanyController, ApplicationError, Vector[Company]] =
+    ZIO.serviceWithZIO[CompanyController](_.getCompanies)
+
+  def addCompany(name: String): ZIO[CompanyController & UUIDGenerator, ApplicationError, UUIDv7] =
+    ZIO.serviceWithZIO[CompanyController](_.addCompany(name))
+
+  def deleteCompany(uuid: UUIDv7): ZIO[CompanyController, ApplicationError, UUIDv7] =
+    ZIO.serviceWithZIO[CompanyController](_.deleteCompany(uuid))
 }
 
 //  Implement service
 case class CompanyControllerLive(companyService: CompanyService) extends CompanyController {
-  def addCompany(id: Int, name: String): UIO[String] = {
-    Company(id, name)
-      .pipe(companyService.add)
-      .as("Company registered successfully")
-      .catchAll{
-        case dbErr: DatabaseError => dbErr match {
-          case ConnectionNotAvailable => ZIO
-            .logError("An Database error occurred: Connection not available")
-            .as("InternalServerError: An error occurred")
-        }
-        case serviceErr: ServiceError => serviceErr match {
-          case e: EntityExistsError =>
-            ZIO
-              .logError(s"License plate ${e.id} already exists")
-              .as(s"BadRequest: License plate ${e.id} already exists")
-        }
-      }
-  }
+  def getCompany(uuid: UUIDv7): IO[ApplicationError, Company] =
+    companyService.get(uuid)
+
+  def getCompanies: IO[ApplicationError, Vector[Company]] =
+    companyService.getAll
+
+  def addCompany(name: String): ZIO[UUIDGenerator, ApplicationError, UUIDv7] =
+    ZIO.serviceWithZIO[UUIDGenerator](_.uuidV7)
+      .flatMap((uuid: UUIDv7) => companyService.add(Company(uuid, name)).as[UUIDv7](uuid))
+
+  def deleteCompany(uuid: UUIDv7): IO[ApplicationError, UUIDv7] =
+    companyService.delete(uuid)
+      .as[UUIDv7](uuid)
 }
 
 // lift the service implementation into the ZLayer

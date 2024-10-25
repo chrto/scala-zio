@@ -1,40 +1,39 @@
 package zio2demo
 
 import zio.{ZIOAppArgs, ZIO, ZLayer, ZIOAppDefault, Scope, URIO}
+import zio.uuid.UUIDGenerator
 
-import zio2demo.controller.{CarControllerLive, EmployeeControllerLive, DepartmentControllerLive, CompanyControllerLive}
-import zio2demo.controller.{CarController, EmployeeController, DepartmentController, CompanyController}
-import zio2demo.service.{CarServiceLive, EmployeeServiceLive, DepartmentServiceLive, CompanyServiceLive}
+import zio2demo.controller.{EmployeeControllerLive, DepartmentControllerLive, CompanyControllerLive}
+import zio2demo.controller.{EmployeeController, DepartmentController, CompanyController}
+import zio2demo.service.{EmployeeServiceLive, DepartmentServiceLive, CompanyServiceLive}
 import zio2demo.storage.{DatabaseLive}
 import zio2demo.storage.driver.{ConnectionPoolLive}
-import zio2demo.storage.repositories.{CarRepositoryLive, EmployeeRepositoryLive, DepartmentRepositoryLive, CompanyRepositoryLive}
-import zio2demo.storage.repositories.CompanyRepository
+import zio2demo.storage.repositories.{EmployeeRepositoryLive, DepartmentRepositoryLive, CompanyRepositoryLive}
 
 object MyDBApp extends ZIOAppDefault {
+  import zio2demo.common.Crypto._
 
-  def program: URIO[CarController & EmployeeController & DepartmentController & CompanyController, Unit] = {
+  def program: URIO[UUIDGenerator & EmployeeController & DepartmentController & CompanyController, Unit] = (
     for {
-      _ <- CarController.register(1, "Ford", "Focus", 1)
-      _ <- CarController.register(1, "Toyota", "Corolla", 2)
-      _ <- CarController.register(3, "Ford", "Focus", 3)
-      _ <- EmployeeController.addEmployee(1, "John Doe", 2)
-      _ <- EmployeeController.addEmployee(2, "Jack Black", 2)
-      _ <- EmployeeController.addEmployee(1, "Admin Adminovic", 2)
-      _ <- DepartmentController.addDepartment(1, "DEV", 2)
-      _ <- DepartmentController.addDepartment(2, "SALE", 2)
-      _ <- DepartmentController.addDepartment(1, "DESK", 2)
-      _ <- CompanyController.addCompany(1, "Tescos")
-      _ <- CompanyController.addCompany(2, "Deskos")
-      _ <- CompanyController.addCompany(1, "Plenkos")
-    } yield ()
-  }
+      tescosUuid <- CompanyController.addCompany("Tescos")
+      _ <- CompanyController.addCompany("Deskos")
+      _ <- CompanyController.addCompany("Plenkos")
 
-  val myLayer: ZLayer[Any, Nothing, CarController & EmployeeController & DepartmentController & CompanyController] =
-    ((CarRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> CarServiceLive.live >>> CarControllerLive.live)
-    ++ ((EmployeeRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> EmployeeServiceLive.live >>> EmployeeControllerLive.live)
+      devUuid <- DepartmentController.addDepartment("DEV", tescosUuid)
+      _ <- DepartmentController.addDepartment("SALE", tescosUuid)
+      _ <- DepartmentController.addDepartment("DESK", tescosUuid)
+
+      _ <- EmployeeController.addEmployee("John Doe", "joe.doe@company.com", hashPwd("joe-123"), devUuid)
+      _ <- EmployeeController.addEmployee("Jack Black", "jack.black@company.com", hashPwd("jack-123"), devUuid)
+      _ <- EmployeeController.addEmployee("Admin Adminovic", "admin.adminovic@company.com", hashPwd("admin-123"), devUuid)
+    } yield ()
+  ).catchAll(e => ZIO.logError(e.toString))
+
+  val myLayer: ZLayer[Any, Nothing, EmployeeController & DepartmentController & CompanyController] =
+    ((EmployeeRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> EmployeeServiceLive.live >>> EmployeeControllerLive.live)
     ++ ((DepartmentRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> DepartmentServiceLive.live >>> DepartmentControllerLive.live)
     ++ ((CompanyRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> CompanyServiceLive.live >>> CompanyControllerLive.live)
 
-  def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = program.provideLayer(myLayer).exitCode
+  def run: ZIO[ZIOAppArgs & Scope, Nothing, Any] = program.provide(myLayer, UUIDGenerator.live).exitCode
 }
 

@@ -1,59 +1,55 @@
 package zio2demo.storage.repositories
 
 import zio.{URIO, ZIO, ZLayer, ULayer, Ref, IO}
+import zio.uuid.types.UUIDv7
 
 import zio2demo.storage.driver.{Connection}
 import zio2demo.model.Company
-import zio2demo.model.error.{DatabaseError, NotFound}
+import zio2demo.model.ApplicationError._
 import zio2demo.storage.driver.KeyValueStore
 
-import scala.util.chaining._
 import zio2demo.model.Entity
 trait CompanyRepository {
-  def exists(id: Int): ZIO[Connection, DatabaseError, Boolean]
-  def insert(company: Company): ZIO[Connection, DatabaseError, Unit]
-  def get(id: Int): ZIO[Connection, DatabaseError, Company]
-  def getAll: ZIO[Connection, DatabaseError, Vector[Company]]
-  def delete(id: Int): ZIO[Connection, DatabaseError, Unit]
+  def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean]
+  def insert(company: Company): ZIO[Connection, ApplicationError, Unit]
+  def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Company]
+  def getAll: ZIO[Connection, ApplicationError, Vector[Company]]
+  def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit]
 }
 
 case class CompanyRepositoryLive() extends CompanyRepository {
-  def exists(id: Int): ZIO[Connection, DatabaseError, Boolean] =
+  def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Checking if company with id ${id} exists using connection with id: ${c.id}"))
-      .flatMap(_.get[Company](id))
+      .tap((c: Connection) => ZIO.logDebug(s"Checking if company with id ${uuid} exists using connection with id: ${c.id}"))
+      .flatMap(_.get[Company](uuid))
       .map(_.isDefined)
-      .tap {
-        case true => ZIO.logWarning(s"Company with id ${id} exists")
-        case false => ZIO.logInfo(s"Company with id ${id} does not exist")
-      }
       .catchSome{ case _: NotFound => ZIO.succeed(false) }
 
-  def insert(company: Company): ZIO[Connection, DatabaseError, Unit] =
+  def insert(company: Company): ZIO[Connection, ApplicationError, Unit] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Inserting company with id ${company.id} using connection with id: ${c.id}"))
+      .tap((c: Connection) => ZIO.logDebug(s"Inserting company with id ${company.id} using connection with id: ${c.id}"))
       .flatMap(_.add[Company](company))
-      .tap(_ => ZIO.logInfo(s"Company with id ${company.id} inserted"))
+      .tap(_ => ZIO.logDebug(s"Company with id ${company.id} inserted"))
 
-  def get(id: Int): ZIO[Connection, DatabaseError, Company] =
+  def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Company] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Getting company with id ${id} using connection with id: ${c.id}"))
-      .flatMap(_.get[Company](id))
+      .tap((c: Connection) => ZIO.logDebug(s"Getting company with id ${uuid} using connection with id: ${c.id}"))
+      .flatMap(_.get[Company](uuid))
       .flatMap{
         case Some(company: Company) => ZIO.succeed(company)
-        case _ => ZIO.fail(NotFound(s"No company found with id ${id}"))
+        case _ => ZIO.fail(NotFound(s"Company with id ${uuid} not found!"))
       }
 
-  def getAll: ZIO[Connection, DatabaseError, Vector[Company]] =
+  def getAll: ZIO[Connection, ApplicationError, Vector[Company]] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Getting all companies using connection with id: ${c.id}"))
+      .tap((c: Connection) => ZIO.logDebug(s"Getting all companies using connection with id: ${c.id}"))
       .flatMap(_.getAll[Company])
       .flatMap ((companies: Vector[Entity]) => ZIO.succeed(companies.collect { case company: Company => company }))
 
-  def delete(id: Int): ZIO[Connection, DatabaseError, Unit] =
+  def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Deleting company with id ${id} using connection with id: ${c.id}"))
-      .flatMap(_.remove[Company](id))
+      .tap((c: Connection) => ZIO.logDebug(s"Deleting company with id ${uuid} using connection with id: ${c.id}"))
+      .flatMap(_.remove[Company](uuid))
 }
 
 object CompanyRepositoryLive {

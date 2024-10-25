@@ -1,27 +1,64 @@
 package zio2demo.service
 
 import zio.{ZIO, ZLayer, URLayer, IO}
+import zio.uuid.types.UUIDv7
+
+import zio2demo.model.ApplicationError._
 import zio2demo.model.Employee
 import zio2demo.storage.repositories.EmployeeRepository
 import zio2demo.storage.Database
-import zio2demo.model.error.{EntityExistsError, ServiceError, DatabaseError}
 
 trait EmployeeService {
-  def add(employee: Employee): IO[DatabaseError | ServiceError, Unit]
+  def get(uuid: UUIDv7): IO[ApplicationError, Employee]
+  def getAll: IO[ApplicationError, Vector[Employee]]
+  def add(employee: Employee): IO[ApplicationError, Unit]
+  def delete(uuid: UUIDv7): IO[ApplicationError, Unit]
 }
 
 object EmployeeService {
-  def add(employee: Employee): ZIO[EmployeeService, DatabaseError | ServiceError, Unit] =
-    ZIO.serviceWith[EmployeeService](_.add(employee))
+  def get(uuid: UUIDv7): ZIO[EmployeeService, ApplicationError, Employee] =
+    ZIO.serviceWithZIO[EmployeeService](_.get(uuid))
+
+  def getAll: ZIO[EmployeeService, ApplicationError, Vector[Employee]] =
+    ZIO.serviceWithZIO[EmployeeService](_.getAll)
+
+  def add(employee: Employee): ZIO[EmployeeService, ApplicationError, Unit] =
+    ZIO.serviceWithZIO[EmployeeService](_.add(employee))
+
+  def delete(uuid: UUIDv7): ZIO[EmployeeService, ApplicationError, Unit] =
+    ZIO.serviceWithZIO[EmployeeService](_.delete(uuid))
 }
 
 case class EmployeeServiceLive(employeeRepository: EmployeeRepository, db: Database) extends EmployeeService {
-  def add(employee: Employee): IO[DatabaseError | ServiceError, Unit] =
+  def get(uuid: UUIDv7): IO[ApplicationError, Employee] =
+    db.transact(
+      employeeRepository.get(uuid)
+    )
+
+  def getAll: IO[ApplicationError, Vector[Employee]] =
+    db.transact(
+      employeeRepository.getAll
+    )
+
+  def add(employee: Employee): IO[ApplicationError, Unit] =
     db.transact(
       employeeRepository.exists(employee.id)
         .flatMap{
-          case true  => ZIO.fail(EntityExistsError(employee.id))
           case false => employeeRepository.insert(employee)
+          case true  =>
+            ZIO.logWarning(s"Employee with id ${employee.id} exists!") *>
+              ZIO.fail(BadRequest(s"Employee with id ${employee.id} already exists!"))
+        }
+    )
+
+  def delete(uuid: UUIDv7): IO[ApplicationError, Unit] =
+    db.transact(
+      employeeRepository.exists(uuid)
+        .flatMap{
+          case true  => employeeRepository.delete(uuid)
+          case false  =>
+            ZIO.logWarning(s"Employee with id ${uuid} does not exist!") *>
+              ZIO.fail(NotFound(s"Employee with id ${uuid} does not exists!"))
         }
     )
 }
