@@ -31,7 +31,19 @@ object EmployeeEndpoints {
 
   def insert: Endpoint[Unit, (java.util.UUID, EmployeeBody), ApplicationError, CreatedResponse, AuthType.None] =
     Endpoint(Method.POST / "api" / "employees")
-    .query[java.util.UUID](HttpCodec.query[java.util.UUID]("departmentId"))
+    // CustomCodecs.uuidCodec here
+    // .query[java.util.UUID](HttpCodec.query[java.util.UUID]("departmentId"))
+    .query[java.util.UUID](HttpCodec.query[String]("departmentId")
+      .transformOrFailLeft
+        ((uuid: String) =>
+          try {
+            Right(java.util.UUID.fromString(uuid))
+          } catch {
+            case _: IllegalArgumentException => Left("Invalid UUID format Chrto")
+          }
+        )
+        ((uuid: java.util.UUID) => uuid.toString())
+    )
     .in[EmployeeBody]
     .out[CreatedResponse](zio.http.Status.Created)
     .outErrors[ApplicationError](
