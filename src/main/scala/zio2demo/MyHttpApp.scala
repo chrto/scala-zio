@@ -24,9 +24,9 @@ object MyHttpApp extends ZIOAppDefault {
       _ <- DepartmentController.addDepartment("SALE", tescosUuid)
       _ <- DepartmentController.addDepartment("DESK", tescosUuid)
 
-      _ <- EmployeeController.addEmployee("John Doe", "joe.doe@company.com", hashPwd("joe-123"), devUuid)
-      _ <- EmployeeController.addEmployee("Jack Black", "jack.black@company.com", hashPwd("jack-123"), devUuid)
-      _ <- EmployeeController.addEmployee("Admin Adminovic", "admin.adminovic@company.com", hashPwd("admin-123"), devUuid)
+      _ <- EmployeeController.addEmployee("John Doe", "joe.doe@company.com", Crypto.hashPwd("joe-123"), devUuid)
+      _ <- EmployeeController.addEmployee("Jack Black", "jack.black@company.com", Crypto.hashPwd("jack-123"), devUuid)
+      _ <- EmployeeController.addEmployee("Admin Adminovic", "admin.adminovic@company.com", Crypto.hashPwd("admin-123"), devUuid)
     } yield ()
   ).catchAll(e => ZIO.logError(e.toString))
 

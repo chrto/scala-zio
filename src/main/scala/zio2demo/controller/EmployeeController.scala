@@ -7,6 +7,7 @@ import zio.uuid.UUIDGenerator
 import zio2demo.service.EmployeeService
 import zio2demo.model.Employee
 import zio2demo.model.ApplicationError._
+import zio2demo.common.Crypto.Crypto
 
 // Define service
 trait EmployeeController {
@@ -24,8 +25,8 @@ object EmployeeController {
   def getEmployees: ZIO[EmployeeController, ApplicationError, Vector[Employee]] =
     ZIO.serviceWithZIO[EmployeeController](_.getEmployees)
 
-  def addEmployee(name: String, email: String, pwdHash: String, departmentId: UUIDv7): ZIO[EmployeeController & UUIDGenerator, ApplicationError, UUIDv7] =
-    ZIO.serviceWithZIO[EmployeeController](_.addEmployee(name, email, pwdHash, departmentId))
+  def addEmployee(name: String, email: String, password: String, departmentId: UUIDv7): ZIO[EmployeeController & UUIDGenerator, ApplicationError, UUIDv7] =
+    ZIO.serviceWithZIO[EmployeeController](_.addEmployee(name, email, Crypto.hashPwd(password), departmentId))
 
   def deleteEmployee(uuid: UUIDv7): ZIO[EmployeeController, ApplicationError, UUIDv7] =
     ZIO.serviceWithZIO[EmployeeController](_.deleteEmployee(uuid))
