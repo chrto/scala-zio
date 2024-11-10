@@ -9,7 +9,7 @@ object AuthenticationBearer {
   val bearerAuth: HandlerAspect[Any, Unit] =
     HandlerAspect.bearerAuth(
       (token: Secret) =>
-        JwtToken.jwtDecode(token.value.toString, SECRET_KEY)
+        JwtToken.jwtDecode(token.value.asString, SECRET_KEY)
           .map(_ => true)
           .getOrElse(false)
     )

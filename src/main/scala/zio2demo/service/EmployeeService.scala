@@ -11,6 +11,7 @@ import zio2demo.storage.Database
 trait EmployeeService {
   def get(uuid: UUIDv7): IO[ApplicationError, Employee]
   def getByEmail(email: String): IO[ApplicationError, Employee]
+  def getByCredentials(userName: String, pwdHash: String): IO[ApplicationError, Employee]
   def getAll: IO[ApplicationError, Vector[Employee]]
   def add(employee: Employee): IO[ApplicationError, Unit]
   def delete(uuid: UUIDv7): IO[ApplicationError, Unit]
@@ -22,6 +23,9 @@ object EmployeeService {
 
   def getByEmail(email: String): ZIO[EmployeeService, ApplicationError, Employee] =
     ZIO.serviceWithZIO[EmployeeService](_.getByEmail(email))
+
+  def getByCredentials(userName: String, pwdHash: String): ZIO[EmployeeService, ApplicationError, Employee] =
+    ZIO.serviceWithZIO[EmployeeService](_.getByCredentials(userName, pwdHash))
 
   def getAll: ZIO[EmployeeService, ApplicationError, Vector[Employee]] =
     ZIO.serviceWithZIO[EmployeeService](_.getAll)
@@ -45,6 +49,19 @@ case class EmployeeServiceLive(employeeRepository: EmployeeRepository, db: Datab
       .catchSome{
         case _: NotFound => ZIO.fail(NotFound(s"No employee found with email ${email}!"))
       }
+    )
+
+  def getByCredentials(userName: String, pwdHash: String): IO[ApplicationError, Employee] =
+    db.transact(
+      employeeRepository.find(_.email == userName)
+        .catchSome{
+          case _: NotFound => ZIO.fail(Unauthenticated(s"No employee found with email ${userName}!"))
+        }
+        .flatMap{ (employee: Employee) =>
+          employee.pwdHash == pwdHash match
+            case true => ZIO.succeed(employee)
+            case false => ZIO.fail(Unauthenticated(s"Invalid password for employee with email ${userName}!"))
+        }
     )
 
   def getAll: IO[ApplicationError, Vector[Employee]] =

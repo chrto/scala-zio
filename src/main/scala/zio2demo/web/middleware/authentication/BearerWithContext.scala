@@ -3,6 +3,7 @@ package zio2demo.web.middleware.authentication
 import zio.ZIO
 import zio.http.{HandlerAspect, Handler, Response, Request, Header, Headers}
 import zio.json.EncoderOps
+import zio.uuid.types.UUIDv7
 
 import zio2demo.model.Employee
 import zio2demo.service.EmployeeService
@@ -22,11 +23,13 @@ object AuthenticationBearerWithContext extends AuthenticationBearerWithContext {
       request.header(Header.Authorization) match {
         case Some(Header.Authorization.Bearer(token)) =>
           ZIO.fromEither(
-            JwtToken.jwtDecode(token.value.toString, SECRET_KEY)
+            JwtToken.jwtDecode(token.value.asString, SECRET_KEY)
             .left.map(buildResponse)
             .flatMap(_.subject.toRight(buildResponse(Unauthenticated("Missing subject claim!"))))
           )
-          .flatMap(EmployeeService.getByEmail)
+          .map(java.util.UUID.fromString)
+          .map(UUIDv7.wrap)
+          .flatMap(EmployeeService.get)
           .map(request -> _)
           .catchAll{
             case appErr: ApplicationError => ZIO.fail(buildResponse(appErr))

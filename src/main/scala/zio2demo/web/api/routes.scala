@@ -4,7 +4,6 @@ import zio.http.{Routes, HandlerAspect}
 import zio.uuid.UUIDGenerator
 
 object ApiRoutes {
-  import company.CompanyRoutes
   import zio2demo.controller.CompanyController
   import zio2demo.controller.EmployeeController
   import zio2demo.controller.DepartmentController
@@ -17,4 +16,9 @@ object ApiRoutes {
       employee.EmployeeRoutes.make ++
       department.DepartmentRoutes.make
     )  @@ AuthenticationBearerWithContext.bearerAuth @@ HandlerAspect.debug
+
+  val authRoutes: Routes[EmployeeService, Nothing] =
+    (
+      authentication.AuthenticationRoutes.make
+    ) @@ HandlerAspect.debug
 }

@@ -13,27 +13,26 @@ object JwtToken {
   val SECRET_KEY = "sdjfohfp87s6df897dsatfh"  // TODO: move to config
 
   trait JwtToken {
-    def jwtEncode(username: String, secretKey: String): String
+    def jwtEncode(userId: String, secretKey: String): String
     def jwtDecode(token: String, key: String): Either[ApplicationError, JwtClaim]
   }
 
   object JwtToken {
-    def jwtEncode(username: String, secretKey: String): String =
-      JwtTokenLive.jwtEncode(username, secretKey)
+    def jwtEncode(userId: String, secretKey: String): String =
+      JwtTokenLive.jwtEncode(userId, secretKey)
 
     def jwtDecode(token: String, secretKey: String): Either[ApplicationError, JwtClaim] =
       JwtTokenLive.jwtDecode(token, secretKey)
   }
 
   object JwtTokenLive extends JwtToken {
-    def jwtEncode(username: String, secretKey: String): String =
+    def jwtEncode(userId: String, secretKey: String): String =
       Jwt.encode(
-        JwtClaim(
-          subject = Some(username),
-          issuer = Some("zio2demo")
-        )
+        JwtClaim()
+          .about(userId)
+          .by("zio2demo")
           .issuedNow
-          .expiresIn(300),
+          .expiresIn(30000000),
         secretKey,
         JwtAlgorithm.HS512
       )
