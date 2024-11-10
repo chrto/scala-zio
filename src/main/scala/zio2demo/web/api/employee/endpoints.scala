@@ -11,25 +11,27 @@ object EmployeeEndpoints {
   import zio2demo.model.ApplicationError._
   import zio2demo.controller.CompanyController
 
-  def get: Endpoint[java.util.UUID, java.util.UUID, ApplicationError, EmployeeResponse, AuthType.None] =
+  def get: Endpoint[java.util.UUID, java.util.UUID, ApplicationError, EmployeeResponse, AuthType.Bearer] =
     Endpoint(Method.GET / "api" /  "employees" / zio.http.uuid("employeeId"))
     .out[EmployeeResponse](zio.http.Status.Ok)
+    .auth(AuthType.Bearer)
     .outErrors[ApplicationError](
       HttpCodec.error[NotFound](zio.http.Status.NotFound),
       HttpCodec.error[Forbidden](zio.http.Status.Forbidden),
       HttpCodec.error[InternalServerError](zio.http.Status.InternalServerError)
     )
 
-  def getAll: Endpoint[Unit, Unit, ApplicationError, Vector[EmployeeResponse], AuthType.None] =
+  def getAll: Endpoint[Unit, Unit, ApplicationError, Vector[EmployeeResponse], AuthType.Bearer] =
     Endpoint(Method.GET / "api" / "employees")
     .out[Vector[EmployeeResponse]](zio.http.Status.Ok)
+    .auth(AuthType.Bearer)
     .outErrors[ApplicationError](
       HttpCodec.error[NotFound](zio.http.Status.NotFound),
       HttpCodec.error[Forbidden](zio.http.Status.Forbidden),
       HttpCodec.error[InternalServerError](zio.http.Status.InternalServerError)
     )
 
-  def insert: Endpoint[Unit, (java.util.UUID, EmployeeBody), ApplicationError, CreatedResponse, AuthType.None] =
+  def insert: Endpoint[Unit, (java.util.UUID, EmployeeBody), ApplicationError, CreatedResponse, AuthType.Bearer] =
     Endpoint(Method.POST / "api" / "employees")
     // CustomCodecs.uuidCodec here
     // .query[java.util.UUID](HttpCodec.query[java.util.UUID]("departmentId"))
@@ -52,6 +54,7 @@ object EmployeeEndpoints {
       }
       (identity))
     .out[CreatedResponse](zio.http.Status.Created)
+    .auth(AuthType.Bearer)
     .outErrors[ApplicationError](
       HttpCodec.error[NotFound](zio.http.Status.NotFound),
       HttpCodec.error[BadRequest](zio.http.Status.BadRequest),
@@ -59,9 +62,10 @@ object EmployeeEndpoints {
       HttpCodec.error[InternalServerError](zio.http.Status.InternalServerError)
     )
 
-  def delete: Endpoint[java.util.UUID, java.util.UUID, ApplicationError, DeletedResponse, AuthType.None] =
+  def delete: Endpoint[java.util.UUID, java.util.UUID, ApplicationError, DeletedResponse, AuthType.Bearer] =
     Endpoint(Method.DELETE / "api" / "employees"/ zio.http.uuid("employeeId"))
     .out[DeletedResponse](zio.http.Status.Ok)
+    .auth(AuthType.Bearer)
     .outErrors[ApplicationError](
       HttpCodec.error[NotFound](zio.http.Status.NotFound),
       HttpCodec.error[Forbidden](zio.http.Status.Forbidden),
