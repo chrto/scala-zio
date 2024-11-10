@@ -16,6 +16,8 @@ def settingsApp = Seq(
   libraryDependencies ++= Seq(
     zioHttp,
     zioUuid,
+    zioJson,
+    jwtCore,
     zioTest,
     zioTestSBT,
     zioTestMagnolia

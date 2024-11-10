@@ -10,6 +10,7 @@ import zio2demo.storage.Database
 
 trait EmployeeService {
   def get(uuid: UUIDv7): IO[ApplicationError, Employee]
+  def getByEmail(email: String): IO[ApplicationError, Employee]
   def getAll: IO[ApplicationError, Vector[Employee]]
   def add(employee: Employee): IO[ApplicationError, Unit]
   def delete(uuid: UUIDv7): IO[ApplicationError, Unit]
@@ -18,6 +19,9 @@ trait EmployeeService {
 object EmployeeService {
   def get(uuid: UUIDv7): ZIO[EmployeeService, ApplicationError, Employee] =
     ZIO.serviceWithZIO[EmployeeService](_.get(uuid))
+
+  def getByEmail(email: String): ZIO[EmployeeService, ApplicationError, Employee] =
+    ZIO.serviceWithZIO[EmployeeService](_.getByEmail(email))
 
   def getAll: ZIO[EmployeeService, ApplicationError, Vector[Employee]] =
     ZIO.serviceWithZIO[EmployeeService](_.getAll)
@@ -33,6 +37,14 @@ case class EmployeeServiceLive(employeeRepository: EmployeeRepository, db: Datab
   def get(uuid: UUIDv7): IO[ApplicationError, Employee] =
     db.transact(
       employeeRepository.get(uuid)
+    )
+
+  def getByEmail(email: String): IO[ApplicationError, Employee] =
+    db.transact(
+      employeeRepository.find(_.email == email)
+      .catchSome{
+        case _: NotFound => ZIO.fail(NotFound(s"No employee found with email ${email}!"))
+      }
     )
 
   def getAll: IO[ApplicationError, Vector[Employee]] =

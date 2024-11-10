@@ -33,8 +33,7 @@ object EmployeeEndpoints {
     Endpoint(Method.POST / "api" / "employees")
     // CustomCodecs.uuidCodec here
     // .query[java.util.UUID](HttpCodec.query[java.util.UUID]("departmentId"))
-    .query[java.util.UUID](HttpCodec.query[String]("departmentId")
-      .transformOrFailLeft
+    .query[java.util.UUID](HttpCodec.query[String]("departmentId").transformOrFailLeft
         ((uuid: String) =>
           try {
             Right(java.util.UUID.fromString(uuid))
@@ -44,7 +43,14 @@ object EmployeeEndpoints {
         )
         ((uuid: java.util.UUID) => uuid.toString())
     )
-    .in[EmployeeBody]
+    // CustomCodecs.body here
+    // .in[EmployeeBody]
+    .inCodec[EmployeeBody](HttpCodec.content[EmployeeBody].transformOrFailLeft
+      {
+        case EmployeeBody("", email, password) => Left("Name is empty!")
+        case body => Right(body)
+      }
+      (identity))
     .out[CreatedResponse](zio.http.Status.Created)
     .outErrors[ApplicationError](
       HttpCodec.error[NotFound](zio.http.Status.NotFound),

@@ -1,21 +1,20 @@
 package zio2demo.web.api
 
-import zio.http.Routes
-import zio.http.Middleware.basicAuth
-import zio.http.HandlerAspect
+import zio.http.{Routes, HandlerAspect}
 import zio.uuid.UUIDGenerator
-import employee.EmployeeRoutes
 
 object ApiRoutes {
   import company.CompanyRoutes
   import zio2demo.controller.CompanyController
   import zio2demo.controller.EmployeeController
   import zio2demo.controller.DepartmentController
+  import zio2demo.service.EmployeeService
+  import zio2demo.web.middleware.authentication.AuthenticationBearerWithContext
 
-  val routes: Routes[CompanyController & EmployeeController & DepartmentController & UUIDGenerator, Nothing] =
+  val routes: Routes[CompanyController & EmployeeController & DepartmentController & UUIDGenerator & EmployeeService, Nothing] =
     (
       company.CompanyRoutes.make ++
       employee.EmployeeRoutes.make ++
       department.DepartmentRoutes.make
-    ) @@ HandlerAspect.debug
+    )  @@ AuthenticationBearerWithContext.bearerAuth @@ HandlerAspect.debug
 }

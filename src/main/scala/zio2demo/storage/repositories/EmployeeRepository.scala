@@ -15,6 +15,7 @@ trait EmployeeRepository {
   def insert(employee: Employee): ZIO[Connection, ApplicationError, Unit]
   def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Employee]
   def getAll: ZIO[Connection, ApplicationError, Vector[Employee]]
+  def find(predicate: Employee => Boolean): ZIO[Connection, ApplicationError, Employee]
   def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit]
 }
 
@@ -50,6 +51,13 @@ case class EmployeeRepositoryLive() extends EmployeeRepository {
       .tap((c: Connection) => ZIO.logDebug(s"Getting all employees using connection with id: ${c.id}"))
       .flatMap(_.getAll[Employee])
       .flatMap ((employees: Vector[Entity]) => ZIO.succeed(employees.collect { case employee: Employee => employee }))
+
+  def find(predicate: Employee => Boolean): ZIO[Connection, ApplicationError, Employee] =
+    getAll
+      .flatMap(_.find(predicate) match {
+        case Some(employee) => ZIO.succeed(employee)
+        case None => ZIO.fail(NotFound(s"No employee found!"))
+      })
 
   def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit] =
     ZIO.service[Connection]

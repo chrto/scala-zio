@@ -4,8 +4,6 @@ import zio._
 import zio.http._
 import zio.uuid.types.UUIDv7
 import zio.uuid.UUIDGenerator
-import zio2demo.model.EntityType
-import zio2demo.model.Department
 
 object DepartmentRoutes {
   import zio2demo.model.body.DepartmentBody
@@ -37,7 +35,7 @@ object DepartmentRoutes {
         .map((uuid: UUIDv7) => DeletedResponse(uuid.toString, "Department"))
     }
 
-  def make: Routes[DepartmentController & zio.uuid.UUIDGenerator, Nothing] = Routes(
+  def make: Routes[DepartmentController & UUIDGenerator, Nothing] = Routes(
     DepartmentEndpoints.get.implementHandler(handler(handleGetDepartmentEndPoint)),
     // DepartmentEndpoints.get.implement[DepartmentController](handleGetDepartmentEndPoint(_)),  // ^ same as above ^
     DepartmentEndpoints.getAll.implementHandler(handler(handleGetDepartmentsEndPoint)),

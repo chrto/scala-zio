@@ -3,6 +3,7 @@ package zio2demo
 import zio.{ZIOAppDefault, ZLayer, URIO, ZIO}
 import zio.http.Server
 import zio.uuid.{UUIDGenerator}
+import zio2demo.service.EmployeeService
 
 object MyHttpApp extends ZIOAppDefault {
   import zio2demo.controller.{EmployeeControllerLive, DepartmentControllerLive, CompanyControllerLive}
@@ -34,14 +35,15 @@ object MyHttpApp extends ZIOAppDefault {
     web.api.ApiRoutes.routes ++
     web.app.WebAppRoutes.routes
 
+  val userServiceLayer: ZLayer[Any, Nothing, EmployeeService] = EmployeeRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live) >>> EmployeeServiceLive.live
   val myLayer: ZLayer[Any, Nothing, EmployeeController & DepartmentController & CompanyController] =
-    ((EmployeeRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> EmployeeServiceLive.live >>> EmployeeControllerLive.live)
+    (userServiceLayer >>> EmployeeControllerLive.live)
     ++ ((DepartmentRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> DepartmentServiceLive.live >>> DepartmentControllerLive.live)
     ++ ((CompanyRepositoryLive.live ++ (ConnectionPoolLive.live >>> DatabaseLive.live)) >>> CompanyServiceLive.live >>> CompanyControllerLive.live)
 
   override val run =
       zio.Console.printLine("please visit page http://localhost:8080") *>
-      (setStorage *> Server.serve(routes)).provide(Server.defaultWithPort(8080), myLayer, UUIDGenerator.live)
+      (setStorage *> Server.serve(routes)).provide(Server.defaultWithPort(8080), myLayer, UUIDGenerator.live, userServiceLayer)
 
 }
 
