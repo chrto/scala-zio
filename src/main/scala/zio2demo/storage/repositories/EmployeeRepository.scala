@@ -1,59 +1,68 @@
 package zio2demo.storage.repositories
 
 import zio.{URIO, ZIO, ZLayer, ULayer, Ref, IO}
+import zio.uuid.types.UUIDv7
 
 import zio2demo.storage.driver.{Connection}
 import zio2demo.model.Employee
-import zio2demo.model.error.{DatabaseError, NotFound}
+import zio2demo.model.ApplicationError._
 import zio2demo.storage.driver.KeyValueStore
 
-import scala.util.chaining._
 import zio2demo.model.Entity
+
 trait EmployeeRepository {
-  def exists(id: Int): ZIO[Connection, DatabaseError, Boolean]
-  def insert(employee: Employee): ZIO[Connection, DatabaseError, Unit]
-  def get(id: Int): ZIO[Connection, DatabaseError, Employee]
-  def getAll: ZIO[Connection, DatabaseError, Vector[Employee]]
-  def delete(id: Int): ZIO[Connection, DatabaseError, Unit]
+  def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean]
+  def insert(employee: Employee): ZIO[Connection, ApplicationError, Unit]
+  def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Employee]
+  def getAll: ZIO[Connection, ApplicationError, Vector[Employee]]
+  def find(predicate: Employee => Boolean): ZIO[Connection, ApplicationError, Employee]
+  def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit]
 }
 
 case class EmployeeRepositoryLive() extends EmployeeRepository {
-  def exists(id: Int): ZIO[Connection, DatabaseError, Boolean] =
+  def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Checking if employee with id ${id} exists using connection with id: ${c.id}"))
-      .flatMap(_.get[Employee](id))
+      .tap((c: Connection) => ZIO.logDebug(s"Checking if employee with id ${uuid} exists using connection with id: ${c.id}"))
+      .flatMap(_.get[Employee](uuid))
       .map(_.isDefined)
       .tap {
-        case true => ZIO.logWarning(s"Employee with id ${id} exists")
-        case false => ZIO.logInfo(s"Employee with id ${id} does not exist")
+        case true => ZIO.logWarning(s"Employee with id ${uuid} exists")
+        case false => ZIO.logDebug(s"Employee with id ${uuid} does not exist")
       }
       .catchSome{ case _: NotFound => ZIO.succeed(false) }
 
-  def insert(employee: Employee): ZIO[Connection, DatabaseError, Unit] =
+  def insert(employee: Employee): ZIO[Connection, ApplicationError, Unit] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Inserting employee with id ${employee.id} using connection with id: ${c.id}"))
+      .tap((c: Connection) => ZIO.logDebug(s"Inserting employee with id ${employee.id} using connection with id: ${c.id}"))
       .flatMap(_.add[Employee](employee))
-      .tap(_ => ZIO.logInfo(s"Employee with id ${employee.id} inserted"))
+      .tap(_ => ZIO.logDebug(s"Employee with id ${employee.id} inserted"))
 
-  def get(id: Int): ZIO[Connection, DatabaseError, Employee] =
+  def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Employee] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Getting employee with id ${id} using connection with id: ${c.id}"))
-      .flatMap(_.get[Employee](id))
+      .tap((c: Connection) => ZIO.logDebug(s"Getting employee with id ${uuid} using connection with id: ${c.id}"))
+      .flatMap(_.get[Employee](uuid))
       .flatMap{
         case Some(employee: Employee) => ZIO.succeed(employee)
-        case _ => ZIO.fail(NotFound(s"No employee found with id ${id}"))
+        case _ => ZIO.fail(NotFound(s"No employee found with id ${uuid}"))
       }
 
-  def getAll: ZIO[Connection, DatabaseError, Vector[Employee]] =
+  def getAll: ZIO[Connection, ApplicationError, Vector[Employee]] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Getting all employees using connection with id: ${c.id}"))
+      .tap((c: Connection) => ZIO.logDebug(s"Getting all employees using connection with id: ${c.id}"))
       .flatMap(_.getAll[Employee])
       .flatMap ((employees: Vector[Entity]) => ZIO.succeed(employees.collect { case employee: Employee => employee }))
 
-  def delete(id: Int): ZIO[Connection, DatabaseError, Unit] =
+  def find(predicate: Employee => Boolean): ZIO[Connection, ApplicationError, Employee] =
+    getAll
+      .flatMap(_.find(predicate) match {
+        case Some(employee) => ZIO.succeed(employee)
+        case None => ZIO.fail(NotFound(s"No employee found!"))
+      })
+
+  def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit] =
     ZIO.service[Connection]
-      .tap((c: Connection) => ZIO.logInfo(s"Deleting employee with id ${id} using connection with id: ${c.id}"))
-      .flatMap(_.remove[Employee](id))
+      .tap((c: Connection) => ZIO.logDebug(s"Deleting employee with id ${uuid} using connection with id: ${c.id}"))
+      .flatMap(_.remove[Employee](uuid))
 }
 
 object EmployeeRepositoryLive {

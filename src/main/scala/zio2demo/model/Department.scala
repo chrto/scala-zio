@@ -1,3 +1,5 @@
 package zio2demo.model
 
-case class Department(id: Int, name: String, companyId: Int) extends Entity
+import zio.uuid.types.UUIDv7
+
+case class Department(id: UUIDv7, name: String, companyId: UUIDv7) extends Entity

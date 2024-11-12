@@ -1,33 +1,30 @@
 package zio2demo.model
 
+import zio.uuid.types.UUIDv7
+
 trait Entity {
-  val id: Int
+  val id: UUIDv7
 }
 
 trait EntityType[E <: Entity] {
   def entityName: String
-  def getPrimaryKey(e: E): Int = e.id
-  def getForeignKey(e: E): Option[Int]
+  def getPrimaryKey(e: E): UUIDv7 = e.id
+  def getForeignKey(e: E): Option[UUIDv7]
 }
 
 object EntityType {
   given EntityType[Company] with {
-    def entityName: String = "company"
-    def getForeignKey(e: Company): Option[Int] = None
+    def entityName: String = "companies"
+    def getForeignKey(e: Company): Option[UUIDv7] = None
   }
 
   given EntityType[Department] with {
-    def entityName: String = "department"
-    def getForeignKey(e: Department): Option[Int] = Some(e.companyId)
+    def entityName: String = "departments"
+    def getForeignKey(e: Department): Option[UUIDv7] = Some(e.companyId)
   }
 
   given EntityType[Employee] with {
-    def entityName: String = "employee"
-    def getForeignKey(e: Employee): Option[Int] = Some(e.departmentId)
-  }
-
-  given EntityType[Car] with {
-    def entityName: String = "car"
-    def getForeignKey(e: Car): Option[Int] = Some(e.employeeId)
+    def entityName: String = "employees"
+    def getForeignKey(e: Employee): Option[UUIDv7] = Some(e.departmentId)
   }
 }
