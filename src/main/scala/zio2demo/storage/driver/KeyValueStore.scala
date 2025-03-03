@@ -7,17 +7,17 @@ import zio2demo.model.ApplicationError._
 import zio2demo.model.{Entity, EntityType}
 
 trait KeyValueStore[E, F[_, _]] {
-  def get[V <: Entity](uuid: UUIDv7)(using entity: EntityType[V]): F[E, Option[Entity]]
-  def getAll[V <: Entity](using entity: EntityType[V]): F[E, Vector[Entity]]
+  def get[V <: Entity](uuid: UUIDv7)(using entity: EntityType[V]): F[E, Option[V]]
+  def getAll[V <: Entity](using entity: EntityType[V]): F[E, Vector[V]]
   def add[V <: Entity](value: V)(using entity: EntityType[V]): F[E, Unit]
   def remove[V <: Entity](uuid: UUIDv7)(using entity: EntityType[V]): F[E, Unit]
 }
 
 object KeyValueStore {
-  def get[V <: Entity, E: Tag, F[_, _]: TagKK](uuid: UUIDv7)(using entity: EntityType[V]): ZIO[KeyValueStore[E, F], Nothing, F[E, Option[Entity]]] =
+  def get[V <: Entity, E: Tag, F[_, _]: TagKK](uuid: UUIDv7)(using entity: EntityType[V]): ZIO[KeyValueStore[E, F], Nothing, F[E, Option[V]]] =
     ZIO.serviceWith[KeyValueStore[E, F]](_.get(uuid))
 
-  def getAll[V <: Entity, E: Tag, F[_, _]: TagKK](using entity: EntityType[V]): ZIO[KeyValueStore[E, F], Nothing, F[E, Vector[Entity]]] =
+  def getAll[V <: Entity, E: Tag, F[_, _]: TagKK](using entity: EntityType[V]): ZIO[KeyValueStore[E, F], Nothing, F[E, Vector[V]]] =
     ZIO.serviceWith[KeyValueStore[E, F]](_.getAll)
 
   def add[V <: Entity, E: Tag, F[_, _]: TagKK](value: V)(using entity: EntityType[V]): ZIO[KeyValueStore[E, F], Nothing, F[E, Unit]] =
@@ -28,22 +28,23 @@ object KeyValueStore {
 }
 
 case class KeyValueStoreLive(memoryStorage: Ref[Map[String, Vector[Entity]]]) extends KeyValueStore[ApplicationError, IO] {
-  def get[V <: Entity](uuid: UUIDv7)(using entity: EntityType[V]): IO[ApplicationError, Option[Entity]] =
+  def get[V <: Entity](uuid: UUIDv7)(using entity: EntityType[V]): IO[ApplicationError, Option[V]] =
     memoryStorage.get
       .flatMap(
         _.get(entity.entityName)
-        .map(_.collectFirst{
-            case e: Entity if e.id == uuid => e
+        .map(_.collectFirst[V]{
+            case e if e.id == uuid => e.asInstanceOf[V]
         })
         .fold
           (ZIO.fail(NotFound(s"No storage found for ${entity.entityName}")))
           (ZIO.succeed)
       )
 
-  def getAll[V <: Entity](using entity: EntityType[V]): IO[ApplicationError, Vector[Entity]] =
+  def getAll[V <: Entity](using entity: EntityType[V]): IO[ApplicationError, Vector[V]] =
     memoryStorage.get
       .flatMap(
         _.get(entity.entityName)
+        .map(_.asInstanceOf[Vector[V]])
         .fold
           (ZIO.fail(NotFound(s"No storage found for ${entity.entityName}")))
           (ZIO.succeed)
