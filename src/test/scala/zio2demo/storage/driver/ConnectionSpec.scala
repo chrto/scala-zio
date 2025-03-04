@@ -22,100 +22,126 @@ object ConnectionSpec extends ZIOSpecDefault {
     "Company 2",
   )
 
-  case class KeyValueStoreMock(ref: Ref[Map[String, Vector[Entity | UUIDv7 | Unit]]]) extends KeyValueStore[ApplicationError, IO] {
+  class KeyValueStoreMock(cnt: Counter) extends KeyValueStore[ApplicationError, IO] {
     def get[V <: Entity](uuid: UUIDv7)(using entity: EntityType[V]): IO[ApplicationError, Option[V]] =
+      cnt.updateGet(uuid) *> ZIO.succeed[Option[V]](company_1.asInstanceOf[V].pure[Option])
+
+    def getAll[V <: Entity](using entity: EntityType[V]): IO[ApplicationError, Vector[V]] =
+      cnt.updateGetAll() *> ZIO.succeed[Vector[V]](Vector(company_1.asInstanceOf[V], company_2.asInstanceOf[V]))
+
+    def add[V <: Entity](value: V)(using entity: EntityType[V]): IO[ApplicationError, Unit] =
+      cnt.updateAdd(value) *> ZIO.succeed[Unit](())
+
+    def remove[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Unit] =
+      cnt.updateRemove(uuid) *> ZIO.succeed[Unit](())
+  }
+
+  object KeyValueStoreMock {
+    val layer: ZLayer[Any, Nothing, ConnectionLive] =
+      Counter.layer >>>
+        ZLayer.fromFunction(KeyValueStoreMock(_)) >>>
+        ZLayer.fromFunction(ConnectionLive("connection_1", _))
+  }
+
+  class Counter(ref: Ref[Map[String, Vector[Entity | UUIDv7 | Unit]]]) {
+    def updateGet(uuid: UUIDv7) =
       ref.update(_.updatedWith("get") {
         case None => Vector[UUIDv7](uuid).pure[Option]
         case Some(uuids) => (uuids :+ uuid).pure[Option]
-      }) *> ZIO.succeed[Option[V]](company_1.asInstanceOf[V].pure[Option])
+      })
+    def getGet() = ref.get.map(_.get("get").getOrElse(Vector[UUIDv7]()))
 
-    def getAll[V <: Entity](using entity: EntityType[V]): IO[ApplicationError, Vector[V]] =
+    def updateGetAll() =
       ref.update(_.updatedWith("getall") {
         case None => Vector[Unit](()).pure[Option]
         case Some(units) => (units :+ ()).pure[Option]
-      }) *> ZIO.succeed[Vector[V]](Vector(company_1.asInstanceOf[V], company_2.asInstanceOf[V]))
+      })
+    def getGetAll() = ref.get.map(_.get("getall").getOrElse(Vector[Unit]()))
 
-    def add[V <: Entity](value: V)(using entity: EntityType[V]): IO[ApplicationError, Unit] =
+    def updateAdd(value: Entity) =
       ref.update(_.updatedWith("add") {
-        case None => Vector[V](value).pure[Option]
+        case None => Vector[Entity](value).pure[Option]
         case Some(values) => (values :+ value).pure[Option]
-      }) *> ZIO.succeed[Unit](())
+      })
+    def getAdd() = ref.get.map(_.get("add").getOrElse(Vector[Entity]()))
 
-    def remove[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Unit] =
+    def updateRemove(uuid: UUIDv7) =
       ref.update(_.updatedWith("remove") {
         case None => Vector[UUIDv7](uuid).pure[Option]
         case Some(uuids) => (uuids :+ uuid).pure[Option]
-      }) *> ZIO.succeed[Unit](())
+      })
+    def getRemove() = ref.get.map(_.get("remove").getOrElse(Vector[UUIDv7]()))
   }
 
-  def spec = suiteAll("Connection") {
-
-    suite("Get value")(
-      for {
-        cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
-        connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
-        r <- connection.get[Company](company_1.id)
-        calls <- cnt.get.map(_.get("get").getOrElse(Vector[UUIDv7]()))
-      } yield zio.Chunk(
-        suite("SPEC")(
-          test("store.get has been called once"){assert(calls)(hasSize(equalTo(1)))},
-          test("store.get has been called with exact id"){assert(calls.head)(equalTo(company_1.id))}
-        ),
-        suite("TEST")(
-          test("Should return Option value with exact company."){assert(r)(isSome(equalTo(company_1)))}
-        )
-      )
-    )
-
-    suite("Get all values")(
-      for {
-        cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
-        connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
-        r <- connection.getAll[Company]
-        calls <- cnt.get.map(_.get("getall").getOrElse(Vector[Unit]()))
-      } yield zio.Chunk(
-        suite("SPCEC")(
-          test("store.getAll has been called once")(assert(calls)(hasSize(equalTo(1))))
-        ),
-        suite("TEST")(
-          test("Should return Vector with exact size")(assert(r)(hasSize(equalTo(2)))),
-          test("Should return Vector with exact values")(assert(r)(hasSameElements(Vector(company_1, company_2))))
-        )
-      )
-    )
-
-    suite("Add value")(
-      for {
-        cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
-        connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
-        r <- connection.add[Company](company_1)
-        calls <- cnt.get.map(_.get("add").getOrElse(Vector[Company]()))
-      } yield zio.Chunk(
-        suite("SPCEC")(
-          test("store.add has been called once")(assert(calls)(hasSize(equalTo(1)))),
-          test("store.add has been called with exact company"){assert(calls.head)(equalTo(company_1))}
-        ),
-        suite("TEST")(
-          test("Should return Unit")(assert(r)(isUnit))
-        )
-      )
-    )
-
-    suite("Remove value")(
-      for {
-        cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
-        connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
-        r <- connection.remove[Company](company_1.id)
-        calls <- cnt.get.map(_.get("remove").getOrElse(Vector[UUIDv7]()))
-      } yield zio.Chunk(
-        suite("SPCEC")(
-          test("store.remove has been called once")(assert(calls)(hasSize(equalTo(1)))),
-          test("store.remove has been called with exact id"){assert(calls.head)(equalTo(company_1.id))}
-        ),
-        suite("TEST")(
-          test("Should return Unit")(assert(r)(isUnit))
-        )
-      )
-    )
+  object Counter {
+    val layer: ZLayer[Any, Nothing, Counter] =
+      ZLayer.fromZIO(Ref.make(Map.empty[String, Vector[zio2demo.model.Entity | UUIDv7 | Unit]])) >>>
+        ZLayer.fromFunction(Counter(_))
   }
+
+  def spec = {
+    suiteAll("Connection") {
+
+      suite("Get value")(
+        for {
+          result <- ZIO.service[Connection].flatMap(_.get[Company](company_1.id))
+          calls <- ZIO.service[Counter].flatMap(_.getGet())
+        } yield zio.Chunk(
+          suite("SPEC")(
+            test("store.get has been called once"){assert(calls)(hasSize(equalTo(1)))},
+            test("store.get has been called with exact id"){assert(calls.head)(equalTo(company_1.id))}
+          ),
+          suite("TEST")(
+            test("Should return Option value with exact company."){assert(result)(isSome(equalTo(company_1)))}
+          )
+        )
+      )
+
+      suite("Get all values")(
+        for {
+          result <- ZIO.service[Connection].flatMap(_.getAll[Company])
+          calls <- ZIO.service[Counter].flatMap(_.getGetAll())
+        } yield zio.Chunk(
+          suite("SPEC")(
+            test("store.getAll has been called once")(assert(calls)(hasSize(equalTo(1))))
+          ),
+          suite("TEST")(
+            test("Should return Vector with exact size")(assert(result)(hasSize(equalTo(2)))),
+            test("Should return Vector with exact values")(assert(result)(hasSameElements(Vector(company_1, company_2))))
+          )
+        )
+      )
+
+      suite("Add value")(
+        for {
+          result <- ZIO.service[Connection].flatMap(_.add[Company](company_1))
+          calls <- ZIO.service[Counter].flatMap(_.getAdd())
+        } yield zio.Chunk(
+          suite("SPEC")(
+            test("store.add has been called once")(assert(calls)(hasSize(equalTo(1)))),
+            test("store.add has been called with exact company"){assert(calls.head)(equalTo(company_1))}
+          ),
+          suite("TEST")(
+            test("Should return Unit")(assert(result)(isUnit))
+          )
+        )
+      )
+
+      suite("Remove value")(
+        for {
+          result <- ZIO.service[Connection].flatMap(_.remove[Company](company_1.id))
+          calls <- ZIO.service[Counter].flatMap(_.getRemove())
+        } yield zio.Chunk(
+          suite("SPEC")(
+            test("store.remove has been called once")(assert(calls)(hasSize(equalTo(1)))),
+            test("store.remove has been called with exact id"){assert(calls.head)(equalTo(company_1.id))}
+          ),
+          suite("TEST")(
+            test("Should return Unit")(assert(result)(isUnit))
+          )
+        )
+      )
+      }
+  // }.provideLayer(KeyValueStoreMock.layer ++ Counter.layer)
+  }.provideShared(KeyValueStoreMock.layer ++ Counter.layer)
 }
