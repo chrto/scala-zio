@@ -50,49 +50,73 @@ object ConnectionSpec extends ZIOSpecDefault {
 
   def spec = suite("Connection") {
     zio.Chunk(
-      test("Should get value from store"){
+      suite("Get value"){
         for {
           cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
           connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
           r <- connection.get[Company](company_1.id)
           calls <- cnt.get.map(_.get("get").getOrElse(Vector[UUIDv7]()))
-        } yield assert(r)(isSome(equalTo(company_1))) &&     // return value is Some(company_1)
-                assert(calls)(hasSize(equalTo(1))) &&        // store.get has been called once
-                assert(calls.head)(equalTo(company_1.id))    // store.get has been called with id of company_1
+        } yield zio.Chunk(
+          suite("SPEC")(zio.Chunk (
+            test("store.get has been called once"){assert(calls)(hasSize(equalTo(1)))},
+            test("store.get has been called with exact id"){assert(calls.head)(equalTo(company_1.id))}
+          )),
+          suite("TEST")(
+            test("Should return Option value with exact company."){assert(r)(isSome(equalTo(company_1)))}
+          )
+        )
       },
 
-      test("Should getAll values from store"){
+      suite("Get all values")(
         for {
           cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
           connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
           r <- connection.getAll[Company]
           calls <- cnt.get.map(_.get("getall").getOrElse(Vector[Unit]()))
-        } yield assert(r)(hasSize(equalTo(2))) &&                             // return value is Vector with exact size
-                assert(r)(hasSameElements(Vector(company_1, company_2))) &&   // return value is Vector with exact values
-                assert(calls)(hasSize(equalTo(1)))                            // store.getAll has been called once
-      },
+        } yield zio.Chunk(
+          suite("SPCEC")(
+            test("store.getAll has been called once")(assert(calls)(hasSize(equalTo(1))))
+          ),
+          suite("TEST")(zio.Chunk(
+            test("Should return Vector with exact size")(assert(r)(hasSize(equalTo(2)))),
+            test("Should return Vector with exact values")(assert(r)(hasSameElements(Vector(company_1, company_2))))
+          ))
+        )
+      ),
 
-      test("Should add value into store"){
+      suite("Add value")(
         for {
           cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
           connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
           r <- connection.add[Company](company_1)
           calls <- cnt.get.map(_.get("add").getOrElse(Vector[Company]()))
-        } yield assert(r)(isUnit) &&                      // return value is Unit
-                assert(calls)(hasSize(equalTo(1))) &&     // store.add has been called once
-                assert(calls.head)(equalTo(company_1))    // store.add has been called with company_1
-      },
+        } yield zio.Chunk(
+          suite("SPCEC")(zio.Chunk(
+            test("store.add has been called once")(assert(calls)(hasSize(equalTo(1)))),
+            test("store.add has been called with exact company"){assert(calls.head)(equalTo(company_1))}
+          )),
+          suite("TEST")(
+            test("Should return Unit")(assert(r)(isUnit))
+          )
+        )
+      ),
 
-      test("Should remove value into store"){
+      suite("Remove value")(
         for {
           cnt <- Ref.make(Map.empty[String, Vector[Entity | UUIDv7 | Unit]])
           connection <- ZIO.service[Connection].provideLayer(ZLayer.succeed(KeyValueStoreMock(cnt)) >>> ZLayer.fromFunction(ConnectionLive("connection_1", _)))
           r <- connection.remove[Company](company_1.id)
           calls <- cnt.get.map(_.get("remove").getOrElse(Vector[UUIDv7]()))
-        } yield assert(r)(isUnit) &&                          // return value is Unit
-                assert(calls)(hasSize(equalTo(1))) &&         // store.remove has been called once
-                assert(calls.head)(equalTo(company_1.id))    // store.remove has been called with id of company_1
-      }
+        } yield zio.Chunk(
+          suite("SPCEC")(zio.Chunk(
+            test("store.remove has been called once")(assert(calls)(hasSize(equalTo(1)))),
+            test("store.remove has been called with exact id"){assert(calls.head)(equalTo(company_1.id))}
+          )),
+          suite("TEST")(
+            test("Should return Unit")(assert(r)(isUnit))
+          )
+        )
+      )
     )
   }
 }
