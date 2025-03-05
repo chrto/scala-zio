@@ -54,7 +54,6 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
         ))
           .flatMap((env: zio.ZEnvironment[Vector[ConnectionLive]]) => ZLayer.fromZIO(Ref.make(env.get[Vector[ConnectionLive]]))) >>>
           ZLayer.fromFunction(ConnectionPoolLive(_))
-    // val layerPool: ZLayer[Any, Nothing, ConnectionPoolLive] = layerConnections >>> ZLayer.fromFunction(ConnectionPoolLive(_))
   }
 
   def spec = suiteAll("Connection Pool") {
@@ -132,7 +131,7 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
           }
         )
       )
-    ).provideShared(ConnectionPoolMock.layer ++ KeyValueStoreMock.layer) @@ TestAspect.sequential
+    ).provideShared(ConnectionPoolMock.layer) @@ TestAspect.sequential
 
     suite("release")(
       suite("Borrow all connections")(
@@ -216,10 +215,6 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
           )
         }
       )
-    ).provideShared(
-      ConnectionPoolMock.layer ++
-      KeyValueStoreMock.layer ++
-      ConnectionsBorrowed.layer
-    ) @@ TestAspect.sequential
+    ).provideShared(ConnectionPoolMock.layer ++ ConnectionsBorrowed.layer) @@ TestAspect.sequential
   } @@ TestAspect.parallel
 }
