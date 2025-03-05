@@ -22,6 +22,7 @@ def settingsApp = Seq(
     zioTestSBT,
     zioTestMagnolia,
     zioMock,
+    cats
   ),
 )
 

@@ -64,7 +64,6 @@ case class KeyValueStoreLive(memoryStorage: Ref[Map[String, Vector[Entity]]]) ex
 }
 
 object KeyValueStoreLive {
-  import zio2demo.model.{Company}
   val live: ULayer[KeyValueStore[ApplicationError, IO]] =
     ZLayer.fromZIO(Ref.make(Map.empty[String, Vector[Entity]]).map(KeyValueStoreLive(_)))
 }

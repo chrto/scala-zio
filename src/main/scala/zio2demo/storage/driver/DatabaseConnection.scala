@@ -22,7 +22,11 @@ case class ConnectionPoolLive(ref: Ref[Vector[ConnectionLive]]) extends Connecti
       .tap((connection: ConnectionLive) => ZIO.logDebug(s"Obtained connection with id: ${connection.id}") )
 
   def release(c: ConnectionLive): UIO[Unit] =
-    ref.update(_ :+ c)
+    ref.update(pool =>
+      pool.map(_.id).contains(c.id) match
+        case true => pool
+        case false => pool :+ c
+    )
       .tap(_ => ZIO.logDebug(s"Released connection with id: ${c.id}"))
 }
 
