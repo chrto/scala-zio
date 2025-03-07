@@ -1,12 +1,12 @@
 package zio2demo.storage
 
-import zio.{ZIO, UIO, Cause, Scope, ZLayer, URLayer, Ref}
+import zio.{ZIO, UIO, Cause, Scope, ZLayer, URLayer, Ref, Tag}
 
 import zio2demo.storage.driver.{ConnectionPool, Connection}
 import zio2demo.model.ApplicationError._
 
 trait Database {
-  def transact[R, E, A](dbProgram: ZIO[Connection & R, E, A]): ZIO[R, E | ApplicationError, A]
+  def transact[R, E, A: Tag](dbProgram: ZIO[Connection & R, E, A]): ZIO[R, E | ApplicationError, A]
 }
 
 case class DatabaseLive(connectionPool: ConnectionPool) extends Database {
@@ -15,7 +15,7 @@ case class DatabaseLive(connectionPool: ConnectionPool) extends Database {
       (connectionPool.borrow)
       (connectionPool.release)
 
-  def transact[R, E, A](dbProgram: ZIO[Connection & R, E, A]): ZIO[R, E | ApplicationError, A] =
+  def transact[R, E, A: Tag](dbProgram: ZIO[Connection & R, E, A]): ZIO[R, E | ApplicationError, A] =
     ZIO.scoped{
       connection.flatMap(connection => dbProgram.provideSomeLayer[R](ZLayer.succeed(connection)))
     }
