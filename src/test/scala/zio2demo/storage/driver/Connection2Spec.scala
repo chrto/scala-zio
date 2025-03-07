@@ -1,6 +1,6 @@
 package zio2demo.storage.driver
 
-import zio.{Tag, TagKK, Ref, ZIO, UIO, IO, URLayer, ULayer, ZLayer}
+import zio.{Scope, Tag, TagKK, Ref, ZIO, UIO, IO, URLayer, ULayer, ZLayer}
 import zio.test._
 import zio.test.Assertion._
 import zio.uuid.types.UUIDv7
@@ -47,7 +47,7 @@ object Connection2Spec extends ZIOSpecDefault {
         ZLayer.fromFunction(ConnectionLive("connection_1", _))
   }
 
-  def spec = {
+  def spec: Spec[Environment & (TestEnvironment & Scope), Any] = {
     suiteAll("Connection") {
 
       suite("Get value")(
