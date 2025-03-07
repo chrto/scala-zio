@@ -58,7 +58,7 @@ object DatabaseSpec extends ZIOSpecDefault {
       suite("transact")(
         for {
           result <-  ZIO.service[Database].flatMap(_.transact(CompanyRepositoryLive().get(uuid)))
-          counter <- ZIO.service[Ref[Vector[(String, Option[String], Option[String])]]].flatMap(_.get).debug("Call counter ")
+          counter <- ZIO.service[Ref[Vector[(String, Option[String], Option[String])]]].flatMap(_.get)
         } yield zio.Chunk(
           suite("TEST")(
             test("Should run dbProgram and return exact entity"){assert(result)(equalTo(company))}
