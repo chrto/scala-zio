@@ -43,7 +43,7 @@ case class EmployeeRepositoryLive() extends EmployeeRepository {
       .flatMap(_.get[Employee](uuid))
       .flatMap{
         case Some(employee: Employee) => ZIO.succeed(employee)
-        case _ => ZIO.fail(NotFound(s"No employee found with id ${uuid}"))
+        case _ => ZIO.fail(NotFound(s"Employee with id ${uuid} not found!"))
       }
 
   def getAll: ZIO[Connection, ApplicationError, Vector[Employee]] =
