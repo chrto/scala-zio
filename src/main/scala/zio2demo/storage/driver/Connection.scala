@@ -7,6 +7,7 @@ import zio2demo.model.ApplicationError._
 import zio2demo.model.{Entity, EntityType}
 
 trait Connection {
+  val id: String
   def add[E <: Entity](value: E)(using entity: EntityType[E]): IO[ApplicationError, Unit]
   def get[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]]
   def getAll[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Vector[E]]
