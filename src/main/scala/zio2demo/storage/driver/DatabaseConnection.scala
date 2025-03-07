@@ -5,12 +5,12 @@ import zio2demo.model.ApplicationError._
 import zio2demo.model.ErrorOrigin
 
 trait ConnectionPool {
-  def borrow: IO[ApplicationError, ConnectionLive]
-  def release(c: ConnectionLive): UIO[Unit]
+  def borrow: IO[ApplicationError, Connection]
+  def release(c: Connection): UIO[Unit]
 }
 
-case class ConnectionPoolLive(ref: Ref[Vector[ConnectionLive]]) extends ConnectionPool {
-  def borrow: IO[ApplicationError, ConnectionLive] =
+case class ConnectionPoolLive(ref: Ref[Vector[Connection]]) extends ConnectionPool {
+  def borrow: IO[ApplicationError, Connection] =
     ref.modify {
       case head +: tail => (Some(head), tail)
       case v            => (None, v)
@@ -19,9 +19,9 @@ case class ConnectionPoolLive(ref: Ref[Vector[ConnectionLive]]) extends Connecti
         case Some(connection) => ZIO.succeed(connection)
         case None             => ZIO.fail(InternalServerError("No connections available", ErrorOrigin.DatabaseError()))
       }
-      .tap((connection: ConnectionLive) => ZIO.logDebug(s"Obtained connection with id: ${connection.id}") )
+      .tap((connection: Connection) => ZIO.logDebug(s"Obtained connection with id: ${connection.id}") )
 
-  def release(c: ConnectionLive): UIO[Unit] =
+  def release(c: Connection): UIO[Unit] =
     ref.update(pool =>
       pool.map(_.id).contains(c.id) match
         case true => pool
@@ -37,6 +37,6 @@ object ConnectionPoolLive {
       ConnectionLive("connection-2", kvl),
       ConnectionLive("connection-3", kvl)
     ))
-    .flatMap((env: zio.ZEnvironment[Vector[ConnectionLive]])=> ZLayer.fromZIO(Ref.make(env.get[Vector[ConnectionLive]])))
+    .flatMap((env: zio.ZEnvironment[Vector[Connection]])=> ZLayer.fromZIO(Ref.make(env.get[Vector[Connection]])))
     >>> ZLayer.fromFunction(ConnectionPoolLive(_))
 }

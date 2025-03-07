@@ -16,18 +16,18 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
       ZLayer.fromZIO(Ref.make(Map.empty[String, Vector[Entity]]).map(KeyValueStoreLive(_)))
   }
 
-  class ConnectionsBorrowed(connections: Ref[Vector[ConnectionLive]]) {
-    def add(connection: ConnectionLive): UIO[Unit] =
+  class ConnectionsBorrowed(connections: Ref[Vector[Connection]]) {
+    def add(connection: Connection): UIO[Unit] =
       connections.update(pool =>
         pool.map(_.id).contains(connection.id) match
           case true => pool
           case false => pool :+ connection
       )
 
-    def add(cs: Vector[ConnectionLive]): UIO[Unit] =
+    def add(cs: Vector[Connection]): UIO[Unit] =
       cs.foldLeft(ZIO.succeed[Unit](connections.get))((acc, c) => acc *> add(c))
 
-    def get(id: String): UIO[Option[ConnectionLive]] = connections.modify(pool =>
+    def get(id: String): UIO[Option[Connection]] = connections.modify(pool =>
       pool.find(_.id == id) match
         case None => (None, pool)
         case Some(value) => (value.pure[Option], pool.filterNot(_.id == id))
@@ -35,13 +35,13 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
 
     def size: UIO[Int] = connections.get.map(_.length)
 
-    def read(id: String): UIO[Option[ConnectionLive]] = connections.get.map(_.find(_.id == id))
-    def readPool: UIO[Vector[ConnectionLive]] = connections.get
+    def read(id: String): UIO[Option[Connection]] = connections.get.map(_.find(_.id == id))
+    def readPool: UIO[Vector[Connection]] = connections.get
   }
 
   object ConnectionsBorrowed {
     val layer: ZLayer[Any, Nothing, ConnectionsBorrowed] =
-      ZLayer.fromZIO(Ref.make(Vector.empty[ConnectionLive]).map(ConnectionsBorrowed(_)))
+      ZLayer.fromZIO(Ref.make(Vector.empty[Connection]).map(ConnectionsBorrowed(_)))
   }
 
   object ConnectionPoolMock {
@@ -52,7 +52,7 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
           ConnectionLive("connection-2", kvl),
           ConnectionLive("connection-3", kvl)
         ))
-          .flatMap((env: zio.ZEnvironment[Vector[ConnectionLive]]) => ZLayer.fromZIO(Ref.make(env.get[Vector[ConnectionLive]]))) >>>
+          .flatMap((env: zio.ZEnvironment[Vector[Connection]]) => ZLayer.fromZIO(Ref.make(env.get[Vector[Connection]]))) >>>
           ZLayer.fromFunction(ConnectionPoolLive(_))
   }
 
@@ -137,7 +137,7 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
       suite("Borrow all connections")(
         for {
           connections <- ZIO.service[ConnectionPoolLive].flatMap(pool => pool.borrow <*> pool.borrow <*> pool.borrow)
-          _ <- ZIO.service[ConnectionsBorrowed].flatMap(_.add(Vector.empty[ConnectionLive] :+ connections._1 :+ connections._2 :+ connections._3))
+          _ <- ZIO.service[ConnectionsBorrowed].flatMap(_.add(Vector.empty[Connection] :+ connections._1 :+ connections._2 :+ connections._3))
 
           borrowed <- ZIO.service[ConnectionsBorrowed].flatMap(
               connections => connections.read("connection-1") <*> connections.read("connection-2") <*> connections.read("connection-3")

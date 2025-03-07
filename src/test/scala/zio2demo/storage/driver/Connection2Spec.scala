@@ -41,7 +41,7 @@ object Connection2Spec extends ZIOSpecDefault {
   }
 
   object KeyValueStoreMock {
-    val layer: ZLayer[Any, Nothing, ConnectionLive] =
+    val layer: ZLayer[Any, Nothing, Connection] =
       RefMock.layer >>>
         ZLayer.fromFunction(KeyValueStoreMock(_)) >>>
         ZLayer.fromFunction(ConnectionLive("connection_1", _))
