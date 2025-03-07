@@ -36,15 +36,19 @@ object Connection2Spec extends ZIOSpecDefault {
       ref.update(_ :+ uuid) *> ZIO.succeed[Unit](())
   }
 
+  object KeyValueStoreMock {
+    val layer: ZLayer[Any, Nothing, KeyValueStore[ApplicationError, IO]] =
+      RefMock.layer >>>
+        ZLayer.fromFunction(KeyValueStoreMock(_))
+  }
+
   object RefMock {
     val layer: ZLayer[Any, Nothing, Ref[Vector[Entity | UUIDv7 | Unit]]] = ZLayer.fromZIO(Ref.make(Vector.empty[Entity | UUIDv7 | Unit]))
   }
 
-  object KeyValueStoreMock {
-    val layer: ZLayer[Any, Nothing, Connection] =
-      RefMock.layer >>>
-        ZLayer.fromFunction(KeyValueStoreMock(_)) >>>
-        ZLayer.fromFunction(ConnectionLive("connection_1", _))
+  object ConnectionSpec {
+    val layer: ZLayer[Any, Nothing, ConnectionLive] =
+      KeyValueStoreMock.layer >>> ZLayer.fromFunction(ConnectionLive("connection_1", _))
   }
 
   def spec: Spec[Environment & (TestEnvironment & Scope), Any] = {
@@ -110,5 +114,5 @@ object Connection2Spec extends ZIOSpecDefault {
         )
       )
       }
-  }.provideLayer(KeyValueStoreMock.layer ++ RefMock.layer)
+  }.provideLayer(ConnectionSpec.layer ++ RefMock.layer)
 }
