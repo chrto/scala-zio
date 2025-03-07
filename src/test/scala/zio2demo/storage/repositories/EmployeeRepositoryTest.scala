@@ -5,7 +5,6 @@ import zio.test._
 import zio.test.Assertion._
 import zio.uuid.types.UUIDv7
 import cats.syntax.applicative._
-import java.util.UUID
 
 object EmployeeRepositoryTest extends ZIOSpecDefault {
   import zio2demo.model.ApplicationError.{ApplicationError, NotFound, BadRequest}
@@ -27,14 +26,14 @@ object EmployeeRepositoryTest extends ZIOSpecDefault {
   case class ConnectionMock(id: String) extends Connection {
     def add[E <: Entity](value: E)(using entity: EntityType[E]): IO[ApplicationError, Unit] =
       value.id match
-        case id: UUID if id.compareTo(employee.id) == 0 => ZIO.succeed[Unit](())
+        case id: UUIDv7 if id.compareTo(employee.id) == 0 => ZIO.succeed[Unit](())
         case _ => ZIO.fail[ApplicationError](BadRequest(s"Bad request has been sent!"))
 
     def get[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
       uuid match
-        case id: UUID if id.compareTo(employee.id) == 0 => ZIO.succeed[Option[E]](employee.asInstanceOf[E].pure[Option])
-        case id: UUID if id.compareTo(uuid_2) == 0 => ZIO.succeed[Option[E]](None)
-        case id: UUID if id.compareTo(uuid_3) == 0 => ZIO.fail[ApplicationError](NotFound(s"Employee with id '${id.toString()}' has not been found! "))
+        case id: UUIDv7 if id.compareTo(employee.id) == 0 => ZIO.succeed[Option[E]](employee.asInstanceOf[E].pure[Option])
+        case id: UUIDv7 if id.compareTo(uuid_2) == 0 => ZIO.succeed[Option[E]](None)
+        case id: UUIDv7 if id.compareTo(uuid_3) == 0 => ZIO.fail[ApplicationError](NotFound(s"Employee with id '${id.toString()}' has not been found! "))
         case _ => ZIO.fail[ApplicationError](BadRequest(s"Bad request has been sent!"))
 
     def getAll[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] =
