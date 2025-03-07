@@ -37,6 +37,6 @@ object ConnectionPoolLive {
       ConnectionLive("connection-2", kvl),
       ConnectionLive("connection-3", kvl)
     ))
-    .flatMap((env: zio.ZEnvironment[Vector[Connection]])=> ZLayer.fromZIO(Ref.make(env.get[Vector[Connection]])))
+    .flatMap((env: zio.ZEnvironment[Vector[Connection]]) => ZLayer.fromZIO(Ref.make(env.get[Vector[Connection]])))
     >>> ZLayer.fromFunction(ConnectionPoolLive(_))
 }
