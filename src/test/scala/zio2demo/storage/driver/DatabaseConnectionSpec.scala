@@ -144,7 +144,6 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
             )
           borrowedSize <- ZIO.service[ConnectionsBorrowed].flatMap(_.size)
           pool <- ZIO.service[ConnectionPoolLive].flatMap(_.ref.get)
-          // pool <- ZIO.service[Ref[Vector[ConnectionLive]]].flatMap(_.get)
         } yield {
           zio.Chunk(
             suite("Connection Pool")(
@@ -170,7 +169,6 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
           )
           borrowedSize <- ZIO.service[ConnectionsBorrowed].flatMap(_.size)
           pool <- ZIO.service[ConnectionPoolLive].flatMap(_.ref.get)
-          // pool <- ZIO.service[Ref[Vector[ConnectionLive]]].flatMap(_.get)
         } yield {
           zio.Chunk(
             suite("Connection Pool")(
