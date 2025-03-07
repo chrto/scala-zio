@@ -41,7 +41,7 @@ case class DepartmentRepositoryLive() extends DepartmentRepository {
       .flatMap(_.get[Department](uuid))
       .flatMap{
         case Some(department: Department) => ZIO.succeed(department)
-        case _ => ZIO.fail(NotFound(s"No department found with id ${uuid}"))
+        case _ => ZIO.fail(NotFound(s"Department with id ${uuid} not found!"))
       }
 
   def getAll: ZIO[Connection, ApplicationError, Vector[Department]] =
