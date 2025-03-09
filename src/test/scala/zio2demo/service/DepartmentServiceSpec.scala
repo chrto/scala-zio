@@ -99,7 +99,6 @@ object DepartmentServiceSpec extends ZIOSpecDefault {
         for {
           result <- ZIO.service[DepartmentService].flatMap(_.get(uuid_ok))
           cnt <- ZIO.service[Ref[Vector[(String, Option[Any], Option[Either[ApplicationError, Any]])]]].flatMap(_.get)
-          _ <- TestConsole.output.debug(">>>>>>>>>>>>>>")
         } yield zio.Chunk(
           test("Should open transaction"){assert(cnt.filter(_._1 == "transact"))(hasSize(equalTo(1)))},
           test("Should call DepartmentRepository.get once"){assert(cnt.filter(_._1 == "get"))(hasSize(equalTo(1)))},
@@ -184,5 +183,5 @@ object DepartmentServiceSpec extends ZIOSpecDefault {
     )
 
     suite("delete")(test("..."){assertTrue(true)})
-  }.provideLayer(CounterMock.layer ++ ((DepartmentRepositoryMock.layer ++ DatabaseMock.layer) >>> DepartmentServiceLive.live))
+  }.provideLayer(CounterMock.layer ++ ((DepartmentRepositoryMock.layer ++ DatabaseMock.layer) >>> DepartmentServiceLive.live)) @@ TestAspect.silentLogging
 }
