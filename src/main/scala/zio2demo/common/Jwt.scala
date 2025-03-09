@@ -26,6 +26,7 @@ object JwtToken {
   }
 
   object JwtTokenLive extends JwtToken {
+    // TODO: this is not pure function, it uses the system clock
     def jwtEncode(userId: String, secretKey: String): String =
       Jwt.encode(
         JwtClaim()

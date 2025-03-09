@@ -20,7 +20,9 @@ def settingsApp = Seq(
     jwtCore,
     zioTest,
     zioTestSBT,
-    zioTestMagnolia
+    zioTestMagnolia,
+    zioMock,
+    cats
   ),
 )
 
