@@ -38,7 +38,7 @@ case class EmployeeControllerLive(employeeService: EmployeeService) extends Empl
     employeeService.get(uuid)
 
   def getEmployees: IO[ApplicationError, Vector[Employee]] =
-    employeeService.getAll
+    employeeService.getAll.map(_.toVector)
 
   def addEmployee(name: String, email: String, pwdHash: String, departmentId: UUIDv7): ZIO[UUIDGenerator, ApplicationError, UUIDv7] =
     ZIO.serviceWithZIO[UUIDGenerator](_.uuidV7)

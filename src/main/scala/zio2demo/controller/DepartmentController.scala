@@ -37,7 +37,7 @@ case class DepartmentControllerLive(departmentService: DepartmentService) extend
     departmentService.get(uuid)
 
   def getDepartments: IO[ApplicationError, Vector[Department]] =
-    departmentService.getAll
+    departmentService.getAll.map(_.toVector)
 
   def addDepartment(name: String, companyID: UUIDv7): ZIO[UUIDGenerator, ApplicationError, UUIDv7] =
     ZIO.serviceWithZIO[UUIDGenerator](_.uuidV7)
