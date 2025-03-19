@@ -12,7 +12,7 @@ trait EmployeeService {
   def get(uuid: UUIDv7): IO[ApplicationError, Employee]
   def getByEmail(email: String): IO[ApplicationError, Employee]
   def getByCredentials(userName: String, pwdHash: String): IO[ApplicationError, Employee]
-  def getAll: IO[ApplicationError, Vector[Employee]]
+  def getAll: IO[ApplicationError, Seq[Employee]]
   def add(employee: Employee): IO[ApplicationError, Unit]
   def delete(uuid: UUIDv7): IO[ApplicationError, Unit]
 }
@@ -27,7 +27,7 @@ object EmployeeService {
   def getByCredentials(userName: String, pwdHash: String): ZIO[EmployeeService, ApplicationError, Employee] =
     ZIO.serviceWithZIO[EmployeeService](_.getByCredentials(userName, pwdHash))
 
-  def getAll: ZIO[EmployeeService, ApplicationError, Vector[Employee]] =
+  def getAll: ZIO[EmployeeService, ApplicationError, Seq[Employee]] =
     ZIO.serviceWithZIO[EmployeeService](_.getAll)
 
   def add(employee: Employee): ZIO[EmployeeService, ApplicationError, Unit] =
@@ -64,7 +64,7 @@ case class EmployeeServiceLive(employeeRepository: EmployeeRepository, db: Datab
         }
     )
 
-  def getAll: IO[ApplicationError, Vector[Employee]] =
+  def getAll: IO[ApplicationError, Seq[Employee]] =
     db.transact(
       employeeRepository.getAll
     )
