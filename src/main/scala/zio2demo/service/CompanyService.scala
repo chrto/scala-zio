@@ -10,7 +10,7 @@ import zio2demo.storage.Database
 
 trait CompanyService {
   def get(uuid: UUIDv7): IO[ApplicationError, Company]
-  def getAll: IO[ApplicationError, Vector[Company]]
+  def getAll: IO[ApplicationError, Seq[Company]]
   def add(company: Company): IO[ApplicationError, Unit]
   def delete(uuid: UUIDv7): IO[ApplicationError, Unit]
 }
@@ -19,7 +19,7 @@ object CompanyService {
   def get(uuid: UUIDv7): ZIO[CompanyService, ApplicationError, Company] =
     ZIO.serviceWithZIO[CompanyService](_.get(uuid))
 
-  def getAll: ZIO[CompanyService, ApplicationError, Vector[Company]] =
+  def getAll: ZIO[CompanyService, ApplicationError, Seq[Company]] =
     ZIO.serviceWithZIO[CompanyService](_.getAll)
 
   def add(company: Company): ZIO[CompanyService, ApplicationError, Unit] =
@@ -35,7 +35,7 @@ case class CompanyServiceLive(companyRepository: CompanyRepository, db: Database
       companyRepository.get(uuid)
     )
 
-  def getAll: IO[ApplicationError, Vector[Company]] =
+  def getAll: IO[ApplicationError, Seq[Company]] =
     db.transact(
       companyRepository.getAll
     )

@@ -22,7 +22,7 @@ object KeyValueStoreSpec extends ZIOSpecDefault {
   )
 
   val employee_1 = Employee(
-    UUIDv7.wrap(java.util.UUID.fromString("00000000-0000-0000-0000-000000000003")),
+    UUIDv7.wrap(java.util.UUID.fromString("00000000-0000-0000-0000-000000000002")),
     "Joe Doe",
     "joe.doe@c.c",
     Crypto.hashPwd("joe-123"),
@@ -45,36 +45,36 @@ object KeyValueStoreSpec extends ZIOSpecDefault {
 
   def spec = suite("KeyValueStoreSpec") {
     Ref
-      .make(Map.empty[String, Vector[Entity]])
-      .map((store: Ref[Map[String, Vector[Entity]]]) =>
+      .make(Map.empty[String, Map[UUIDv7, Entity]])
+      .map((store: Ref[Map[String, Map[UUIDv7, Entity]]]) =>
         val kvl: KeyValueStore[ApplicationError, IO] = KeyValueStoreLive(store)
         zio.Chunk(
           suite("Adding value into empty store")(
             test("Should add company into store") {
               for {
                 _ <- kvl.add[Company](company)
-                companies <- store.get.map(_.get("companies").fold(Vector.empty[Company])(identity))
-              } yield assert(companies)(hasSameElements(Vector(company)))
+                companies <- store.get.map(_.get("companies").fold(Map.empty[UUIDv7, Company])(identity))
+              } yield assert(companies)(hasSize(equalTo(1))) && assert(companies)(contains(company.id -> company))
             },
             test("Should add department into store") {
               for {
                 _ <- kvl.add[Department](department)
-                departments <- store.get.map(_.get("departments").fold(Vector.empty[Company])(identity))
-              } yield assert(departments)(hasSameElements(Vector(department)))
+                departments <- store.get.map(_.get("departments").fold(Map.empty[UUIDv7, Company])(identity))
+              } yield assert(departments)(hasSize(equalTo(1))) && assert(departments)(contains(department.id -> department))
             },
             test("Should add employee into store") {
               for {
                 _ <- kvl.add[Employee](employee_1)
-                employees <- store.get.map(_.get("employees").fold(Vector.empty[Company])(identity))
-              } yield assert(employees)(hasSameElements(Vector(employee_1)))
+                employees <- store.get.map(_.get("employees").fold(Map.empty[UUIDv7, Company])(identity))
+              } yield assert(employees)(hasSize(equalTo(1))) && assert(employees)(contains(employee_1.id -> employee_1))
             }
           ),
           suite("Adding value into non empty store")(
             test("Should add employees into store") {
               for {
                 _ <- kvl.add[Employee](employee_2) *> kvl.add[Employee](employee_3)
-                employees <- store.get.map(_.get("employees").fold(Vector.empty[Employee])(identity))
-              } yield assert(employees)(hasSize(equalTo(3)) && hasSubset(Vector(employee_2, employee_3)))
+                employees <- store.get.map(_.get("employees").fold(Map.empty[UUIDv7, Employee])(identity))
+              } yield assert(employees)(hasSize(equalTo(3))) && assert(employees)(hasSubset(Map(employee_2.id -> employee_2, employee_3.id -> employee_3)))
             }
           ),
           suite("Getting value from store")(
@@ -88,15 +88,15 @@ object KeyValueStoreSpec extends ZIOSpecDefault {
             test("Should get all employees from store") {
               for {
                 employees <- kvl.getAll[Employee]
-              } yield assert(employees)(hasSize(equalTo(3)) && hasSameElements(Vector(employee_1, employee_2, employee_3)))
+              } yield assert(employees)(hasSize(equalTo(3))) && assert(employees)(hasSameElements(Seq(employee_1, employee_2, employee_3)))
             }
           ),
           suite("Removing values from store")(
             test("Should remove employee from store") {
               for {
                 _ <- kvl.remove[Employee](employee_3.id)
-                employees <- store.get.map(_.get("employees").fold(Vector.empty[Employee])(identity))
-              } yield assert(employees)(hasSize(equalTo(2)) && hasSameElements(Vector(employee_1, employee_2)))
+                employees <- store.get.map(_.get("employees").fold(Map.empty[UUIDv7, Employee])(identity))
+              } yield assert(employees)(hasSize(equalTo(2)) && hasSameElements(Map(employee_1.id -> employee_1, employee_2.id -> employee_2)))
             }
           )
         ),

@@ -36,7 +36,7 @@ case class CompanyControllerLive(companyService: CompanyService) extends Company
     companyService.get(uuid)
 
   def getCompanies: IO[ApplicationError, Vector[Company]] =
-    companyService.getAll
+    companyService.getAll.map(_.toVector)
 
   def addCompany(name: String): ZIO[UUIDGenerator, ApplicationError, UUIDv7] =
     ZIO.serviceWithZIO[UUIDGenerator](_.uuidV7)

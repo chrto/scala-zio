@@ -13,8 +13,10 @@ import zio2demo.model.Entity
 trait EmployeeRepository {
   def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean]
   def insert(employee: Employee): ZIO[Connection, ApplicationError, Unit]
+  def getUnsafe(uuid: UUIDv7): ZIO[Connection, ApplicationError, Employee]
   def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Employee]
-  def getAll: ZIO[Connection, ApplicationError, Vector[Employee]]
+  def getAllUnsafe: ZIO[Connection, ApplicationError, Seq[Employee]]
+  def getAll: ZIO[Connection, ApplicationError, Seq[Employee]]
   def find(predicate: Employee => Boolean): ZIO[Connection, ApplicationError, Employee]
   def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit]
 }
@@ -37,20 +39,33 @@ case class EmployeeRepositoryLive() extends EmployeeRepository {
       .flatMap(_.add[Employee](employee))
       .tap(_ => ZIO.logDebug(s"Employee with id ${employee.id} inserted"))
 
+  def getUnsafe(uuid: UUIDv7): ZIO[Connection, ApplicationError, Employee] =
+    ZIO.service[Connection]
+      .tap((c: Connection) => ZIO.logDebug(s"Getting employee with id ${uuid} using connection with id: ${c.id}"))
+      .flatMap(_.getUnsafe[Employee](uuid))
+      .flatMap(_.fold
+        (ZIO.fail(NotFound(s"Employee with id ${uuid} not found!")))
+        (ZIO.succeed)
+      )
+
   def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Employee] =
     ZIO.service[Connection]
       .tap((c: Connection) => ZIO.logDebug(s"Getting employee with id ${uuid} using connection with id: ${c.id}"))
       .flatMap(_.get[Employee](uuid))
-      .flatMap{
-        case Some(employee: Employee) => ZIO.succeed(employee)
-        case _ => ZIO.fail(NotFound(s"Employee with id ${uuid} not found!"))
-      }
+      .flatMap(_.fold
+        (ZIO.fail(NotFound(s"Employee with id ${uuid} not found!")))
+        (ZIO.succeed)
+      )
 
-  def getAll: ZIO[Connection, ApplicationError, Vector[Employee]] =
+  def getAllUnsafe: ZIO[Connection, ApplicationError, Seq[Employee]] =
+    ZIO.service[Connection]
+      .tap((c: Connection) => ZIO.logDebug(s"Getting all employees using connection with id: ${c.id}"))
+      .flatMap(_.getAllUnsafe[Employee])
+
+  def getAll: ZIO[Connection, ApplicationError, Seq[Employee]] =
     ZIO.service[Connection]
       .tap((c: Connection) => ZIO.logDebug(s"Getting all employees using connection with id: ${c.id}"))
       .flatMap(_.getAll[Employee])
-      .flatMap ((employees: Vector[Entity]) => ZIO.succeed(employees.collect { case employee: Employee => employee }))
 
   def find(predicate: Employee => Boolean): ZIO[Connection, ApplicationError, Employee] =
     getAll

@@ -12,6 +12,7 @@ import zio2demo.storage.DatabaseLive
 import zio2demo.storage.driver.KeyValueStore
 import zio2demo.storage.driver.KeyValueStoreLive
 import zio2demo.storage.driver.ConnectionLive
+import scala.reflect.ClassTag
 
 object DepartmentServiceTest extends ZIOSpecDefault {
   import zio2demo.storage.driver.{Connection}
@@ -39,14 +40,18 @@ object DepartmentServiceTest extends ZIOSpecDefault {
         case entityId if entityId.compareTo(uuid_new) == 0 => ZIO.succeed[Unit](())
         case entityId => ZIO.fail(BadRequest(s"Bad request $entityId"))
 
-    def get[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
+    def getUnsafe[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] = ???
+
+    def get[E <: Entity: ClassTag](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
       uuid match
         case entityId if entityId.compareTo(uuid_ok) == 0 => ZIO.succeed[Option[E]](department_ok.asInstanceOf[E].pure[Option])
         case entityId if entityId.compareTo(uuid_new_err) == 0 => ZIO.succeed[Option[E]](None)
         case entityId if entityId.compareTo(uuid_new) == 0 => ZIO.succeed[Option[E]](None)
         case entityId => ZIO.fail(BadRequest(s"Bad request $entityId"))
 
-    def getAll[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] = ???
+    def getAllUnsafe[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Seq[E]] = ???
+
+    def getAll[E <: Entity: ClassTag](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] = ???
     def remove[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Unit] = ???
   }
 

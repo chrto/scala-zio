@@ -6,6 +6,7 @@ import zio.test.Assertion._
 import zio.uuid.types.UUIDv7
 import cats.syntax.applicative._
 import zio2demo.model.ApplicationError
+import scala.reflect.ClassTag
 
 object CompanyRepositoryTest extends ZIOSpecDefault {
   import zio2demo.model.ApplicationError.ApplicationError
@@ -27,15 +28,19 @@ object CompanyRepositoryTest extends ZIOSpecDefault {
         case id: UUIDv7 if id.compareTo(uuid_1) == 0 => ZIO.succeed[Unit](())
         case _ => ZIO.fail[ApplicationError](BadRequest(s"Bad request has been sent!"))
 
-    def get[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
+    def getUnsafe[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] = ???
+
+    def get[E <: Entity: ClassTag](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
       uuid match
         case id: UUIDv7 if id.compareTo(uuid_1) == 0 => ZIO.succeed[Option[E]](company.asInstanceOf[E].pure[Option])
         case id: UUIDv7 if id.compareTo(uuid_2) == 0 => ZIO.succeed[Option[E]](None)
         case id: UUIDv7 if id.compareTo(uuid_3) == 0 => ZIO.fail[ApplicationError](NotFound(s"Company with id '${id.toString()}' has not been found! "))
         case _ => ZIO.fail[ApplicationError](BadRequest(s"Bad request has been sent!"))
 
-    def getAll[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] =
-      ZIO.succeed[Vector[E]](Vector[E](company.asInstanceOf[E]))
+    def getAllUnsafe[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Seq[E]] = ???
+
+    def getAll[E <: Entity: ClassTag](using entity: EntityType[E]): IO[ApplicationError, Seq[E]] =
+      ZIO.succeed[Seq[E]](Seq[E](company.asInstanceOf[E]))
 
     def remove[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Unit] =
       ZIO.succeed[Unit](())

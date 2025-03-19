@@ -3,6 +3,8 @@ package zio2demo.storage.driver
 import zio.{ZIO, IO, UIO, ULayer, ZLayer, Ref, Exit, Cause}
 import zio.test._
 import zio.test.Assertion._
+import zio.uuid.types.UUIDv7
+
 import cats.syntax.applicative._
 
 object DatabaseConnectionSpec extends ZIOSpecDefault {
@@ -13,7 +15,7 @@ object DatabaseConnectionSpec extends ZIOSpecDefault {
   // Not necessary layer but
   object KeyValueStoreMock {
     val layer: ULayer[KeyValueStore[ApplicationError, IO]] =
-      ZLayer.fromZIO(Ref.make(Map.empty[String, Vector[Entity]]).map(KeyValueStoreLive(_)))
+      ZLayer.fromZIO(Ref.make(Map.empty[String, Map[UUIDv7, Entity]]).map(KeyValueStoreLive(_)))
   }
 
   class ConnectionsBorrowed(connections: Ref[Vector[Connection]]) {

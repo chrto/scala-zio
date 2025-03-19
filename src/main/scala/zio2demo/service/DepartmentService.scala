@@ -10,7 +10,7 @@ import zio2demo.model.ApplicationError._
 
 trait DepartmentService {
   def get(uuid: UUIDv7): IO[ApplicationError, Department]
-  def getAll: IO[ApplicationError, Vector[Department]]
+  def getAll: IO[ApplicationError, Seq[Department]]
   def add(department: Department): IO[ApplicationError, Unit]
   def delete(uuid: UUIDv7): IO[ApplicationError, Unit]
 }
@@ -19,7 +19,7 @@ object DepartmentService {
   def get(uuid: UUIDv7): ZIO[DepartmentService, ApplicationError, Department] =
     ZIO.serviceWithZIO[DepartmentService](_.get(uuid))
 
-  def getAll: ZIO[DepartmentService, ApplicationError, Vector[Department]] =
+  def getAll: ZIO[DepartmentService, ApplicationError, Seq[Department]] =
     ZIO.serviceWithZIO[DepartmentService](_.getAll)
 
   def add(department: Department): ZIO[DepartmentService, ApplicationError, Unit] =
@@ -35,7 +35,7 @@ case class DepartmentServiceLive(departmentRepository: DepartmentRepository, db:
       departmentRepository.get(uuid)
     )
 
-  def getAll: IO[ApplicationError, Vector[Department]] =
+  def getAll: IO[ApplicationError, Seq[Department]] =
     db.transact(
       departmentRepository.getAll
     )
