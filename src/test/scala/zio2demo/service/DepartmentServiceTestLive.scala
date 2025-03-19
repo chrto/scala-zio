@@ -23,21 +23,16 @@ object DepartmentServiceTestLive extends ZIOSpecDefault {
   val uuid_company = UUIDv7.wrap(java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"))
   val uuid_ok = UUIDv7.wrap(java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"))
   val uuid_new = UUIDv7.wrap(java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"))
-  val uuid_err = UUIDv7.wrap(java.util.UUID.fromString("00000000-0000-0000-0000-000000000004"))
-  val uuid_new_err = UUIDv7.wrap(java.util.UUID.fromString("00000000-0000-0000-0000-000000000005"))
 
   val company = Company(uuid_company, "Department s.r.o")
   val department_ok = Department(uuid_ok, "Dev", company.id)
   val department_new = Department(uuid_new, "Dev", company.id)
-  val department_err = Department(uuid_err, "Err", company.id)
-  val department_new_err = Department(uuid_new_err, "New", company.id)
-
   object DatabaseMock {
     val layer: ULayer[Database] =
       ZLayer.fromZIO(Ref.make(
-        Map[String, Vector[Entity]](
-          ("departments", Vector[Entity](department_ok)),
-          ("companies", Vector[Entity](company)),
+        Map[String, Map[UUIDv7, Entity]](
+          ("departments", Map[UUIDv7, Entity](department_ok.id -> department_ok)),
+          ("companies", Map[UUIDv7, Entity](company.id -> company)),
         )).map(KeyValueStoreLive(_)))
         >>> ZLayer.fromFunction((kvl: KeyValueStore[ApplicationError, IO]) => Vector(
           ConnectionLive("connection-1", kvl),
@@ -63,12 +58,7 @@ object DepartmentServiceTestLive extends ZIOSpecDefault {
           ZIO.service[DepartmentService]
             .flatMap(_.get(uuid_new)).exit
             .map(assert(_)(fails(equalTo(NotFound(s"Department with id ${uuid_new} not found!")))))
-        },
-        // test("Should fail with exactly the same error, as connection failed with"){
-        //   ZIO.service[DepartmentService]
-        //     .flatMap(_.get(uuid_err)).exit
-        //     .map(assert(_)(fails(equalTo(BadRequest(s"Bad request $uuid_err")))))
-        // }
+        }
       )}
     )
 
@@ -87,12 +77,7 @@ object DepartmentServiceTestLive extends ZIOSpecDefault {
           ZIO.service[DepartmentService]
             .flatMap(_.add(department_ok)).exit
             .map(assert(_)(fails(equalTo(BadRequest(s"Department with id ${department_ok.id} already exists!")))))
-        },
-        // test("Should fail with exactly the same error, as connection failed with"){
-        //   ZIO.service[DepartmentService]
-        //     .flatMap(_.add(department_new_err)).exit
-        //     .map(assert(_)(fails(equalTo(BadRequest(s"Bad request $uuid_new_err")))))
-        // }
+        }
       )}
     )
 

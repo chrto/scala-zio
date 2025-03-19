@@ -8,6 +8,7 @@ import zio.uuid.types.UUIDv7
 import cats.syntax.all._
 import zio.Console.ConsoleLive
 import zio.mock.MockConsole
+import scala.reflect.ClassTag
 
 object DepartmentServiceSpec extends ZIOSpecDefault {
   import zio2demo.storage.driver.{Connection}
@@ -46,11 +47,17 @@ object DepartmentServiceSpec extends ZIOSpecDefault {
     def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean] =
       this.updateRef[UUIDv7, Boolean]("exists", uuid, departmentRepositoryLive.exists(uuid))
 
+    def getUnsafe(uuid: UUIDv7): ZIO[Connection, ApplicationError, Department] =
+      this.updateRef[UUIDv7, Department]("getUnsafe", uuid, departmentRepositoryLive.getUnsafe(uuid))
+
     def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Department] =
       this.updateRef[UUIDv7, Department]("get", uuid, departmentRepositoryLive.get(uuid))
 
-    def getAll: ZIO[Connection, ApplicationError, Vector[Department]] =
-      this.updateRef[Unit, Vector[Department]]("getAll", (), departmentRepositoryLive.getAll)
+    def getAllUnsafe: ZIO[Connection, ApplicationError, Seq[Department]] =
+      this.updateRef[Unit, Seq[Department]]("getAllUnsafe", (), departmentRepositoryLive.getAllUnsafe)
+
+    def getAll: ZIO[Connection, ApplicationError, Seq[Department]] =
+      this.updateRef[Unit, Seq[Department]]("getAll", (), departmentRepositoryLive.getAll)
 
     def insert(department: Department): ZIO[Connection, ApplicationError, Unit] =
       this.updateRef[Department, Unit]("insert", department, departmentRepositoryLive.insert(department))
@@ -68,14 +75,18 @@ object DepartmentServiceSpec extends ZIOSpecDefault {
         case id if id.compareTo(uuid_new) == 0 => ZIO.succeed[Unit](())
         case id => ZIO.fail(BadRequest(s"Bad request $id"))
 
-    def get[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
+    def getUnsafe[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] = ???
+
+    def get[E <: Entity: ClassTag](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
       uuid match
         case id if id.compareTo(uuid_ok) == 0 => ZIO.succeed[Option[E]](department_ok.asInstanceOf[E].pure[Option])
         case id if id.compareTo(uuid_new_err) == 0 => ZIO.succeed[Option[E]](None)
         case id if id.compareTo(uuid_new) == 0 => ZIO.succeed[Option[E]](None)
         case id => ZIO.fail(BadRequest(s"Bad request $id"))
 
-    def getAll[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] = ???
+    def getAllUnsafe[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Seq[E]] = ???
+
+    def getAll[E <: Entity: ClassTag](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] = ???
     def remove[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Unit] = ???
   }
 
