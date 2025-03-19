@@ -12,8 +12,10 @@ import zio.uuid.types.UUIDv7
 trait DepartmentRepository {
   def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean]
   def insert(department: Department): ZIO[Connection, ApplicationError, Unit]
+  def getUnsafe(uuid: UUIDv7): ZIO[Connection, ApplicationError, Department]
   def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Department]
-  def getAll: ZIO[Connection, ApplicationError, Vector[Department]]
+  def getAllUnsafe: ZIO[Connection, ApplicationError, Seq[Department]]
+  def getAll: ZIO[Connection, ApplicationError, Seq[Department]]
   def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit]
 }
 
@@ -35,20 +37,33 @@ case class DepartmentRepositoryLive() extends DepartmentRepository {
       .flatMap(_.add[Department](department))
       .tap(_ => ZIO.logDebug(s"Department with id ${department.id} inserted"))
 
+  def getUnsafe(uuid: UUIDv7): ZIO[Connection, ApplicationError, Department] =
+    ZIO.service[Connection]
+      .tap((c: Connection) => ZIO.logDebug(s"Getting department with id ${uuid} using connection with id: ${c.id}"))
+      .flatMap(_.getUnsafe[Department](uuid))
+      .flatMap(_.fold
+        (ZIO.fail(NotFound(s"Department with id ${uuid} not found!")))
+        (ZIO.succeed)
+      )
+
   def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Department] =
     ZIO.service[Connection]
       .tap((c: Connection) => ZIO.logDebug(s"Getting department with id ${uuid} using connection with id: ${c.id}"))
       .flatMap(_.get[Department](uuid))
-      .flatMap{
-        case Some(department: Department) => ZIO.succeed(department)
-        case _ => ZIO.fail(NotFound(s"Department with id ${uuid} not found!"))
-      }
+      .flatMap(_.fold
+        (ZIO.fail(NotFound(s"Department with id ${uuid} not found!")))
+        (ZIO.succeed)
+      )
 
-  def getAll: ZIO[Connection, ApplicationError, Vector[Department]] =
+  def getAllUnsafe: ZIO[Connection, ApplicationError, Seq[Department]] =
+    ZIO.service[Connection]
+      .tap((c: Connection) => ZIO.logDebug(s"Getting all departments using connection with id: ${c.id}"))
+      .flatMap(_.getAllUnsafe[Department])
+
+  def getAll: ZIO[Connection, ApplicationError, Seq[Department]] =
     ZIO.service[Connection]
       .tap((c: Connection) => ZIO.logDebug(s"Getting all departments using connection with id: ${c.id}"))
       .flatMap(_.getAll[Department])
-      .flatMap ((departments: Vector[Entity]) => ZIO.succeed(departments.collect { case department: Department => department }))
 
   def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit] =
     ZIO.service[Connection]
