@@ -6,6 +6,7 @@ import zio.test._
 import zio.test.Assertion._
 import zio.uuid.types.UUIDv7
 import cats.syntax.all._
+import scala.reflect.ClassTag
 
 object CompanyServiceSpec extends ZIOSpecDefault {
   import zio2demo.storage.driver.{Connection}
@@ -33,7 +34,7 @@ object CompanyServiceSpec extends ZIOSpecDefault {
     private def updateRef[I, O](name: String, in: I, result: ZIO[Connection, ApplicationError, O]): ZIO[Connection, ApplicationError, O] =
       result.tapBoth(
         (failure: ApplicationError) => ref.update(_ :+ (name, in.pure[Option], failure.asLeft[O].pure[Option])),
-        (value: O) => ref.update(_ :+ (name, in.pure[Option], value.asRight[ApplicationError].pure[Option]))
+        (value: O)                  => ref.update(_ :+ (name, in.pure[Option], value.asRight[ApplicationError].pure[Option]))
       )
 
     def delete(uuid: UUIDv7): ZIO[Connection, ApplicationError, Unit] =
@@ -42,11 +43,17 @@ object CompanyServiceSpec extends ZIOSpecDefault {
     def exists(uuid: UUIDv7): ZIO[Connection, ApplicationError, Boolean] =
       this.updateRef[UUIDv7, Boolean]("exists", uuid, companyRepositoryLive.exists(uuid))
 
+    def getUnsafe(uuid: UUIDv7): ZIO[Connection, ApplicationError, Company] =
+      this.updateRef[UUIDv7, Company]("getUnsafe", uuid, companyRepositoryLive.getUnsafe(uuid))
+
     def get(uuid: UUIDv7): ZIO[Connection, ApplicationError, Company] =
       this.updateRef[UUIDv7, Company]("get", uuid, companyRepositoryLive.get(uuid))
 
-    def getAll: ZIO[Connection, ApplicationError, Vector[Company]] =
-      this.updateRef[Unit, Vector[Company]]("getAll", (), companyRepositoryLive.getAll)
+    def getAllUnsafe: ZIO[Connection, ApplicationError, Seq[Company]] =
+      this.updateRef[Unit, Seq[Company]]("getAllUnsafe", (), companyRepositoryLive.getAllUnsafe)
+
+    def getAll: ZIO[Connection, ApplicationError, Seq[Company]] =
+      this.updateRef[Unit, Seq[Company]]("getAll", (), companyRepositoryLive.getAll)
 
     def insert(company: Company): ZIO[Connection, ApplicationError, Unit] =
       this.updateRef[Company, Unit]("insert", company, companyRepositoryLive.insert(company))
@@ -63,14 +70,16 @@ object CompanyServiceSpec extends ZIOSpecDefault {
         case id if id.compareTo(uuid_new) == 0 => ZIO.succeed[Unit](())
         case id => ZIO.fail(BadRequest(s"Bad request $id"))
 
-    def get[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
+    def getUnsafe[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] = ???
+    def get[E <: Entity: ClassTag](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
       uuid match
         case id if id.compareTo(uuid_ok) == 0 => ZIO.succeed[Option[E]](company.asInstanceOf[E].pure[Option])
         case id if id.compareTo(uuid_new_err) == 0 => ZIO.succeed[Option[E]](None)
         case id if id.compareTo(uuid_new) == 0 => ZIO.succeed[Option[E]](None)
         case id => ZIO.fail(BadRequest(s"Bad request $id"))
 
-    def getAll[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] = ???
+    def getAllUnsafe[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Seq[E]] = ???
+    def getAll[E <: Entity: ClassTag](using entity: EntityType[E]): IO[ApplicationError, Seq[E]] = ???
     def remove[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Unit] = ???
   }
 
