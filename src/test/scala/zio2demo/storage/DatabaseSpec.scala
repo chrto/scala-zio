@@ -5,6 +5,7 @@ import zio.test._
 import zio.test.Assertion._
 import zio.uuid.types.UUIDv7
 import cats.syntax.applicative._
+import scala.reflect.ClassTag
 
 object DatabaseSpec extends ZIOSpecDefault {
   import zio2demo.model
@@ -26,10 +27,15 @@ object DatabaseSpec extends ZIOSpecDefault {
   case class ConnectionMock(id: String) extends Connection {
     def add[E <: Entity](value: E)(using entity: EntityType[E]): IO[ApplicationError, Unit] = ???
 
-    def get[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
+    def getUnsafe[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] = ???
+
+    def get[E <: Entity: ClassTag](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Option[E]] =
       ZIO.succeed[Option[E]](company.asInstanceOf[E].pure[Option])
 
-    def getAll[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] = ???
+    def getAllUnsafe[E <: Entity](using entity: EntityType[E]): IO[ApplicationError, Seq[E]] = ???
+
+    def getAll[E <: Entity: ClassTag](using entity: EntityType[E]): IO[ApplicationError, Vector[E]] = ???
+
     def remove[E <: Entity](uuid: UUIDv7)(using entity: EntityType[E]): IO[ApplicationError, Unit] = ???
   }
 
@@ -47,7 +53,7 @@ object DatabaseSpec extends ZIOSpecDefault {
       CounterMock.layer >>> ZLayer.fromFunction(ConnectionPoolMock(_))
   }
 
-  object DatabaseSpec {
+  object DatabaseMock {
     val layer: ZLayer[Any, Nothing, Database] =
       ConnectionPoolMock.layer >>>
         DatabaseLive.live
@@ -72,5 +78,5 @@ object DatabaseSpec extends ZIOSpecDefault {
         )
       )
     }
-  }.provideLayer(DatabaseSpec.layer ++ CounterMock.layer)
+  }.provideLayer(DatabaseMock.layer ++ CounterMock.layer)
 }
